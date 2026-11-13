@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { usePathname } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Moon01Icon, Sun01Icon } from "@hugeicons/core-free-icons";
@@ -8,6 +7,7 @@ import { Moon01Icon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useTheme } from "@/hooks/use-theme";
 
 const SECTION_TITLES: Record<string, string> = {
 	"/dashboard": "Dashboard",
@@ -20,21 +20,7 @@ const SECTION_TITLES: Record<string, string> = {
 };
 
 function ThemeToggle() {
-	React.useEffect(() => {
-		const stored = localStorage.getItem("theme");
-		const prefersDark = window.matchMedia(
-			"(prefers-color-scheme: dark)",
-		).matches;
-		document.documentElement.classList.toggle(
-			"dark",
-			stored ? stored === "dark" : prefersDark,
-		);
-	}, []);
-
-	const toggleTheme = () => {
-		const dark = document.documentElement.classList.toggle("dark");
-		localStorage.setItem("theme", dark ? "dark" : "light");
-	};
+	const { toggleTheme } = useTheme();
 
 	return (
 		<Button
