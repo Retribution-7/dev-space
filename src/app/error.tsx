@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
-import type { ErrorInfo } from "next/error";
-import Link from "next/link";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	Alert02Icon,
 	Home01Icon,
 	RefreshIcon,
 } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import type { ErrorInfo } from "next/error";
+import Link from "next/link";
+import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
