@@ -1,4 +1,5 @@
 import {
+	Favorites,
 	RecentlyUsed,
 	RecentSnippets,
 	WelcomeSection,
@@ -12,6 +13,7 @@ export default function DashboardPage() {
 			<WorkspaceOverview />
 			<RecentlyUsed />
 			<RecentSnippets />
+			<Favorites />
 		</div>
 	);
 }
