@@ -1,3 +1,5 @@
+import { parseJson } from "./parse-json";
+
 export type JsonTransformResult =
 	| { status: "success"; value: string }
 	| { status: "empty" }
@@ -7,27 +9,20 @@ export function transformJson(
 	input: string,
 	serialize: (value: unknown) => string | undefined,
 ): JsonTransformResult {
-	if (input.trim().length === 0) {
-		return { status: "empty" };
+	const result = parseJson(input);
+
+	if (result.status !== "success") {
+		return result;
 	}
 
-	try {
-		const parsed: unknown = JSON.parse(input);
-		const transformed = serialize(parsed);
+	const transformed = serialize(result.value);
 
-		if (transformed === undefined) {
-			return {
-				status: "invalid",
-				message: "This value cannot be represented as JSON.",
-			};
-		}
-
-		return { status: "success", value: transformed };
-	} catch (error) {
+	if (transformed === undefined) {
 		return {
 			status: "invalid",
-			message:
-				error instanceof Error ? error.message : "Unknown parsing error.",
+			message: "This value cannot be represented as JSON.",
 		};
 	}
+
+	return { status: "success", value: transformed };
 }
