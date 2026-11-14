@@ -1,5 +1,6 @@
 import {
 	RecentlyUsed,
+	RecentSnippets,
 	WelcomeSection,
 	WorkspaceOverview,
 } from "@/widgets/dashboard";
@@ -10,6 +11,7 @@ export default function DashboardPage() {
 			<WelcomeSection />
 			<WorkspaceOverview />
 			<RecentlyUsed />
+			<RecentSnippets />
 		</div>
 	);
 }
