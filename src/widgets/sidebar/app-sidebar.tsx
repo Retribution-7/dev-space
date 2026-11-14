@@ -1,15 +1,6 @@
 "use client";
 
-import {
-	ApiIcon,
-	CodeFolderIcon,
-	CodeIcon,
-	DashboardSquare01Icon,
-	FileBracesIcon,
-	FileTextIcon,
-	PaletteIcon,
-	RegexIcon,
-} from "@hugeicons/core-free-icons";
+import { CodeIcon, DashboardSquare01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,15 +16,11 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { toolNavItems } from "@/shared/config/tools";
 
 const navItems = [
 	{ title: "Dashboard", url: "/dashboard", icon: DashboardSquare01Icon },
-	{ title: "JSON Studio", url: "/json", icon: FileBracesIcon },
-	{ title: "Snippet Manager", url: "/snippets", icon: CodeFolderIcon },
-	{ title: "API Playground", url: "/api-playground", icon: ApiIcon },
-	{ title: "Regex Playground", url: "/regex", icon: RegexIcon },
-	{ title: "Markdown Studio", url: "/markdown", icon: FileTextIcon },
-	{ title: "Color Studio", url: "/colors", icon: PaletteIcon },
+	...toolNavItems,
 ];
 
 export function AppSidebar() {
