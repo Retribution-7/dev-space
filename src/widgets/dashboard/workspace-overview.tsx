@@ -1,3 +1,5 @@
+"use client";
+
 import {
 	ApiIcon,
 	CodeFolderIcon,
@@ -7,36 +9,52 @@ import {
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useFavorites } from "@/features/favorites";
 import { availableToolsCount } from "@/shared/config/tools";
 import { cn } from "@/shared/lib/utils";
 
-type OverviewMetric = {
+type BaseMetric = {
 	title: string;
-	value: number | null;
-	description: string;
 	icon: IconSvgElement;
 };
 
+type StaticOverviewMetric = BaseMetric & {
+	kind: "static";
+	value: number | null;
+	description: string;
+};
+
+type FavoritesOverviewMetric = BaseMetric & {
+	kind: "favorites";
+};
+
+type OverviewMetric = StaticOverviewMetric | FavoritesOverviewMetric;
+
+type MetricStatus = "ready" | "loading" | "error";
+
 const metrics: OverviewMetric[] = [
 	{
+		kind: "static",
 		title: "Saved Snippets",
 		value: null,
 		description: "Will appear after Snippet Manager is implemented.",
 		icon: CodeFolderIcon,
 	},
 	{
+		kind: "static",
 		title: "API Requests",
 		value: null,
 		description: "Will appear after API Playground is implemented.",
 		icon: ApiIcon,
 	},
 	{
+		kind: "favorites",
 		title: "Favorites",
-		value: null,
-		description: "Will appear after favorites are implemented.",
 		icon: StarIcon,
 	},
 	{
+		kind: "static",
 		title: "Available Tools",
 		value: availableToolsCount,
 		description: "Tools currently available in DevSpace.",
@@ -45,14 +63,18 @@ const metrics: OverviewMetric[] = [
 ];
 
 type MetricCardProps = {
-	metric: OverviewMetric;
+	metric: StaticOverviewMetric;
+	status?: MetricStatus;
 };
 
-function MetricCard({ metric }: MetricCardProps) {
-	const hasData = metric.value !== null;
+function MetricCard({ metric, status = "ready" }: MetricCardProps) {
+	const hasData = status === "ready" && metric.value !== null;
+	const isLoading = status === "loading";
+	const isError = status === "error";
 
 	return (
 		<Card
+			aria-busy={isLoading || undefined}
 			className={cn(
 				"gap-0 py-0 shadow-xs",
 				hasData && "ring-primary/20 dark:ring-primary/25",
@@ -74,27 +96,68 @@ function MetricCard({ metric }: MetricCardProps) {
 				</div>
 
 				<div className="mt-auto">
-					<p
+					<div
 						className={cn(
-							"text-2xl font-semibold tracking-tight tabular-nums",
+							"flex min-h-8 items-center text-2xl font-semibold tracking-tight tabular-nums",
 							!hasData && "text-muted-foreground",
 						)}
 					>
-						{hasData ? (
+						{isLoading ? (
+							<Skeleton className="h-7 w-12" />
+						) : hasData ? (
 							metric.value
 						) : (
 							<>
 								<span aria-hidden="true">—</span>
-								<span className="sr-only">No data yet</span>
+								<span className="sr-only">
+									{isError ? "Data unavailable" : "No data yet"}
+								</span>
 							</>
 						)}
-					</p>
+					</div>
 					<p className="text-muted-foreground mt-1 text-xs leading-5 text-pretty">
 						{metric.description}
 					</p>
 				</div>
 			</CardContent>
 		</Card>
+	);
+}
+
+type FavoritesMetricProps = {
+	metric: FavoritesOverviewMetric;
+};
+
+function FavoritesMetric({ metric }: FavoritesMetricProps) {
+	const { favoriteIds, isLoading, hasError } = useFavorites();
+	const status: MetricStatus = isLoading
+		? "loading"
+		: hasError
+			? "error"
+			: "ready";
+	const favoriteCount = favoriteIds.length;
+
+	let description = "Tools you've starred for quick access.";
+
+	if (isLoading) {
+		description = "Loading your favorite tools.";
+	} else if (hasError) {
+		description = "Couldn't load favorites. Try refreshing the page.";
+	} else if (favoriteCount === 0) {
+		description = "Star a tool to keep it within reach.";
+	}
+
+	return (
+		<MetricCard
+			metric={{
+				kind: "static",
+				title: metric.title,
+				value: status === "ready" ? favoriteCount : null,
+				description,
+				icon: metric.icon,
+			}}
+			status={status}
+		/>
 	);
 }
 
@@ -117,9 +180,13 @@ export function WorkspaceOverview() {
 			</div>
 
 			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-				{metrics.map((metric) => (
-					<MetricCard key={metric.title} metric={metric} />
-				))}
+				{metrics.map((metric) =>
+					metric.kind === "favorites" ? (
+						<FavoritesMetric key={metric.title} metric={metric} />
+					) : (
+						<MetricCard key={metric.title} metric={metric} />
+					),
+				)}
 			</div>
 		</section>
 	);
