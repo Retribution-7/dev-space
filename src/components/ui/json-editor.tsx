@@ -30,10 +30,17 @@ import * as React from "react";
 
 import { cn } from "@/shared/lib/utils";
 
+export type JsonEditorHandle = {
+	getValue: () => string;
+	setValue: (value: string) => void;
+};
+
 type JsonEditorProps = {
 	initialValue: string;
 	ariaLabel?: string;
 	className?: string;
+	onChange?: (value: string) => void;
+	ref?: React.Ref<JsonEditorHandle>;
 };
 
 const editorTheme = EditorView.theme(
@@ -131,10 +138,42 @@ export function JsonEditor({
 	initialValue,
 	ariaLabel = "JSON editor",
 	className,
+	onChange,
+	ref,
 }: JsonEditorProps) {
 	const containerRef = React.useRef<HTMLDivElement>(null);
+	const viewRef = React.useRef<EditorView | null>(null);
 	const initialValueRef = React.useRef(initialValue);
 	const ariaLabelRef = React.useRef(ariaLabel);
+	const onChangeRef = React.useRef(onChange);
+
+	React.useEffect(() => {
+		onChangeRef.current = onChange;
+	}, [onChange]);
+
+	React.useImperativeHandle(
+		ref,
+		() => ({
+			getValue: () =>
+				viewRef.current?.state.doc.toString() ?? initialValueRef.current,
+			setValue: (value: string) => {
+				const view = viewRef.current;
+
+				if (!view || view.state.doc.toString() === value) {
+					return;
+				}
+
+				view.dispatch({
+					changes: {
+						from: 0,
+						to: view.state.doc.length,
+						insert: value,
+					},
+				});
+			},
+		}),
+		[],
+	);
 
 	React.useEffect(() => {
 		const container = containerRef.current;
@@ -162,6 +201,11 @@ export function JsonEditor({
 				syntaxHighlighting(jsonHighlightStyle),
 				editorTheme,
 				keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+				EditorView.updateListener.of((update) => {
+					if (update.docChanged) {
+						onChangeRef.current?.(update.state.doc.toString());
+					}
+				}),
 				EditorView.contentAttributes.of({
 					"aria-label": ariaLabelRef.current,
 					"aria-multiline": "true",
@@ -177,7 +221,10 @@ export function JsonEditor({
 			parent: container,
 		});
 
+		viewRef.current = view;
+
 		return () => {
+			viewRef.current = null;
 			view.destroy();
 		};
 	}, []);

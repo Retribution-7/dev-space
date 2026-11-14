@@ -1,0 +1,118 @@
+"use client";
+
+import {
+	AlertCircleIcon,
+	FileBracesIcon,
+	TextIndent01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import * as React from "react";
+
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { JsonEditor, type JsonEditorHandle } from "@/components/ui/json-editor";
+
+import { formatJson } from "../model/format-json";
+
+type JsonStudioProps = {
+	initialValue: string;
+};
+
+export function JsonStudio({ initialValue }: JsonStudioProps) {
+	const editorRef = React.useRef<JsonEditorHandle>(null);
+	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+	const handleFormat = React.useCallback(() => {
+		const editor = editorRef.current;
+
+		if (!editor) {
+			return;
+		}
+
+		const result = formatJson(editor.getValue());
+
+		if (result.status === "empty") {
+			setErrorMessage("The editor is empty. Add some JSON to format.");
+			return;
+		}
+
+		if (result.status === "invalid") {
+			setErrorMessage(`Invalid JSON: ${result.message}`);
+			return;
+		}
+
+		editor.setValue(result.value);
+		setErrorMessage(null);
+	}, []);
+
+	const handleEditorChange = React.useCallback(() => {
+		setErrorMessage(null);
+	}, []);
+
+	return (
+		<Card className="gap-0 py-0 shadow-xs">
+			<CardHeader className="flex flex-row items-center gap-3 border-b">
+				<span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-lg">
+					<HugeiconsIcon
+						icon={FileBracesIcon}
+						className="size-4"
+						aria-hidden="true"
+					/>
+				</span>
+				<div className="min-w-0 flex-1">
+					<CardTitle className="text-sm">JSON Editor</CardTitle>
+					<CardDescription className="text-xs">
+						Syntax highlighting, line numbers, and word wrap are enabled.
+					</CardDescription>
+				</div>
+				<div className="flex shrink-0 items-center gap-2">
+					<span className="bg-muted text-muted-foreground hidden rounded-md border px-2 py-1 font-mono text-[0.7rem] sm:inline-flex">
+						JSON
+					</span>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						onClick={handleFormat}
+					>
+						<HugeiconsIcon
+							icon={TextIndent01Icon}
+							className="size-3.5"
+							data-icon="inline-start"
+							aria-hidden="true"
+						/>
+						Format
+					</Button>
+				</div>
+			</CardHeader>
+			{errorMessage ? (
+				<div
+					role="alert"
+					className="border-destructive/20 bg-destructive/5 flex items-start gap-2 border-b px-4 py-2.5 text-sm"
+				>
+					<HugeiconsIcon
+						icon={AlertCircleIcon}
+						className="text-destructive mt-0.5 size-4 shrink-0"
+						aria-hidden="true"
+					/>
+					<p className="min-w-0">{errorMessage}</p>
+				</div>
+			) : null}
+			<CardContent className="p-0">
+				<JsonEditor
+					ref={editorRef}
+					ariaLabel="JSON document editor"
+					className="h-[clamp(20rem,calc(100svh-16rem),44rem)]"
+					initialValue={initialValue}
+					onChange={handleEditorChange}
+				/>
+			</CardContent>
+		</Card>
+	);
+}
