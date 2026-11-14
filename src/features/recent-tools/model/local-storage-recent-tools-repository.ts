@@ -47,13 +47,14 @@ function readStoredVisits(): RecentToolVisit[] {
 		return [];
 	}
 
+	// Storage access errors propagate so the UI can show an error state.
+	const storedValue = window.localStorage.getItem(STORAGE_KEY);
+
+	if (!storedValue) {
+		return [];
+	}
+
 	try {
-		const storedValue = window.localStorage.getItem(STORAGE_KEY);
-
-		if (!storedValue) {
-			return [];
-		}
-
 		const parsedValue: unknown = JSON.parse(storedValue);
 
 		if (!Array.isArray(parsedValue)) {
@@ -62,6 +63,7 @@ function readStoredVisits(): RecentToolVisit[] {
 
 		return normalizeVisits(parsedValue.filter(isRecentToolVisit));
 	} catch {
+		// Malformed stored data is treated as empty.
 		return [];
 	}
 }
