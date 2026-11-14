@@ -4,6 +4,7 @@ import {
 	AlertCircleIcon,
 	FileBracesIcon,
 	TextIndent01Icon,
+	TextIndentLessIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import * as React from "react";
@@ -19,26 +20,32 @@ import {
 import { JsonEditor, type JsonEditorHandle } from "@/components/ui/json-editor";
 
 import { formatJson } from "../model/format-json";
+import { minifyJson } from "../model/minify-json";
+import type { JsonTransformResult } from "../model/transform-json";
 
 type JsonStudioProps = {
 	initialValue: string;
 };
 
+type JsonTransform = (input: string) => JsonTransformResult;
+
+const EMPTY_EDITOR_MESSAGE = "The editor is empty. Add some JSON first.";
+
 export function JsonStudio({ initialValue }: JsonStudioProps) {
 	const editorRef = React.useRef<JsonEditorHandle>(null);
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-	const handleFormat = React.useCallback(() => {
+	const applyTransform = React.useCallback((transform: JsonTransform) => {
 		const editor = editorRef.current;
 
 		if (!editor) {
 			return;
 		}
 
-		const result = formatJson(editor.getValue());
+		const result = transform(editor.getValue());
 
 		if (result.status === "empty") {
-			setErrorMessage("The editor is empty. Add some JSON to format.");
+			setErrorMessage(EMPTY_EDITOR_MESSAGE);
 			return;
 		}
 
@@ -50,6 +57,14 @@ export function JsonStudio({ initialValue }: JsonStudioProps) {
 		editor.setValue(result.value);
 		setErrorMessage(null);
 	}, []);
+
+	const handleFormat = React.useCallback(() => {
+		applyTransform(formatJson);
+	}, [applyTransform]);
+
+	const handleMinify = React.useCallback(() => {
+		applyTransform(minifyJson);
+	}, [applyTransform]);
 
 	const handleEditorChange = React.useCallback(() => {
 		setErrorMessage(null);
@@ -88,6 +103,20 @@ export function JsonStudio({ initialValue }: JsonStudioProps) {
 							aria-hidden="true"
 						/>
 						Format
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						onClick={handleMinify}
+					>
+						<HugeiconsIcon
+							icon={TextIndentLessIcon}
+							className="size-3.5"
+							data-icon="inline-start"
+							aria-hidden="true"
+						/>
+						Minify
 					</Button>
 				</div>
 			</CardHeader>
