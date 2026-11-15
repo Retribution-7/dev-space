@@ -187,4 +187,60 @@ describe("snippets store", () => {
 			JSON.parse(data.get(SNIPPETS_STORAGE_KEY) ?? "null").state.snippets,
 		).toHaveLength(1);
 	});
+
+	it("adds and removes favorites without touching timestamps", () => {
+		const { store } = createTestStore();
+		const created = store.getState().createSnippet(makeDraft());
+
+		const favorite = store.getState().setSnippetFavorite(created.id, true);
+
+		expect(favorite.isFavorite).toBe(true);
+		expect(favorite.updatedAt).toBe(created.updatedAt);
+		expect(favorite.createdAt).toBe(created.createdAt);
+		expect(store.getState().snippets[0].isFavorite).toBe(true);
+
+		store.getState().setSnippetFavorite(created.id, false);
+
+		expect(store.getState().snippets[0].isFavorite).toBe(false);
+	});
+
+	it("throws when favoriting a snippet that does not exist", () => {
+		const { store } = createTestStore();
+
+		expect(() => store.getState().setSnippetFavorite("missing", true)).toThrow(
+			"Snippet not found.",
+		);
+	});
+
+	it("persists favorites and restores them after reload", () => {
+		const { store, data } = createTestStore();
+		const created = store.getState().createSnippet(makeDraft());
+
+		store.getState().setSnippetFavorite(created.id, true);
+
+		const savedValue = data.get(SNIPPETS_STORAGE_KEY) ?? "";
+		expect(JSON.parse(savedValue).state.snippets[0].isFavorite).toBe(true);
+
+		const { store: restored } = createTestStore({
+			[SNIPPETS_STORAGE_KEY]: savedValue,
+		});
+
+		expect(restored.getState().snippets[0].isFavorite).toBe(true);
+	});
+
+	it("treats snippets stored without the favorite flag as regular ones", () => {
+		const { store } = createTestStore({
+			[SNIPPETS_STORAGE_KEY]: makeStoredSnippet(),
+		});
+
+		expect(store.getState().snippets[0].isFavorite).toBe(false);
+	});
+
+	it("restores the favorite flag from storage", () => {
+		const { store } = createTestStore({
+			[SNIPPETS_STORAGE_KEY]: makeStoredSnippet({ isFavorite: true }),
+		});
+
+		expect(store.getState().snippets[0].isFavorite).toBe(true);
+	});
 });

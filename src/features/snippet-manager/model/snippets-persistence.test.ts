@@ -26,9 +26,24 @@ describe("normalizeStoredSnippet", () => {
 			code: "const value = 1;",
 			language: "TypeScript",
 			tags: ["react", "hooks"],
+			isFavorite: false,
 			createdAt: "2026-01-01T09:00:00.000Z",
 			updatedAt: "2026-01-02T09:00:00.000Z",
 		});
+	});
+
+	it("keeps the favorite flag of stored snippets", () => {
+		expect(
+			normalizeStoredSnippet({ ...validSnippet, isFavorite: true })?.isFavorite,
+		).toBe(true);
+	});
+
+	it("treats snippets saved before favorites existed as regular ones", () => {
+		expect(normalizeStoredSnippet(validSnippet)?.isFavorite).toBe(false);
+		expect(
+			normalizeStoredSnippet({ ...validSnippet, isFavorite: "yes" })
+				?.isFavorite,
+		).toBe(false);
 	});
 
 	it("fills missing optional fields with safe defaults", () => {
@@ -45,6 +60,7 @@ describe("normalizeStoredSnippet", () => {
 			code: "code",
 			language: "Text",
 			tags: [],
+			isFavorite: false,
 			createdAt: "1970-01-01T00:00:00.000Z",
 			updatedAt: "1970-01-01T00:00:00.000Z",
 		});
@@ -96,6 +112,7 @@ const expectedSnippet = {
 	code: "const value = 1;",
 	language: "TypeScript",
 	tags: ["react", "hooks"],
+	isFavorite: false,
 	createdAt: "2026-01-01T09:00:00.000Z",
 	updatedAt: "2026-01-02T09:00:00.000Z",
 };

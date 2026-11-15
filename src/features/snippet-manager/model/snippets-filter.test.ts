@@ -23,6 +23,7 @@ function makeSnippet(overrides: Partial<Snippet> = {}): Snippet {
 		code: "const value = useDebounce(input, 300);",
 		language: "TypeScript",
 		tags: ["react", "hooks"],
+		isFavorite: false,
 		createdAt: "2026-01-01T09:00:00.000Z",
 		updatedAt: new Date(NOW - DAY_IN_MS).toISOString(),
 		...overrides,
@@ -174,6 +175,49 @@ describe("filterSnippets by tags", () => {
 		expect(
 			filterSnippets(allSnippets, makeFilter({ tags: ["REACT"] }), NOW),
 		).toHaveLength(1);
+	});
+});
+
+describe("filterSnippets by favorites", () => {
+	const favoriteSnippet = makeSnippet({ id: "favorite", isFavorite: true });
+	const regularSnippet = makeSnippet({ id: "regular", isFavorite: false });
+
+	it("keeps only favorite snippets when Favorites Only is on", () => {
+		expect(
+			filterSnippets(
+				[favoriteSnippet, regularSnippet],
+				makeFilter({ favoritesOnly: true }),
+				NOW,
+			).map((snippet) => snippet.id),
+		).toEqual(["favorite"]);
+	});
+
+	it("returns everything when Favorites Only is off", () => {
+		expect(
+			filterSnippets(
+				[favoriteSnippet, regularSnippet],
+				makeFilter({ favoritesOnly: false }),
+				NOW,
+			),
+		).toHaveLength(2);
+	});
+
+	it("works together with the query and the other filters", () => {
+		expect(
+			filterSnippets(
+				[favoriteSnippet, regularSnippet],
+				makeFilter({ favoritesOnly: true, query: "debounce" }),
+				NOW,
+			).map((snippet) => snippet.id),
+		).toEqual(["favorite"]);
+
+		expect(
+			filterSnippets(
+				[favoriteSnippet, regularSnippet],
+				makeFilter({ favoritesOnly: true, language: "Python" }),
+				NOW,
+			),
+		).toEqual([]);
 	});
 });
 
@@ -378,6 +422,7 @@ describe("countActiveFilters and isFilterActive", () => {
 		expect(countActiveFilters(makeFilter({ query: "react" }))).toBe(0);
 		expect(countActiveFilters(makeFilter({ language: "Python" }))).toBe(1);
 		expect(countActiveFilters(makeFilter({ tags: ["react", "json"] }))).toBe(1);
+		expect(countActiveFilters(makeFilter({ favoritesOnly: true }))).toBe(1);
 		expect(
 			countActiveFilters(
 				makeFilter({ dateRange: { type: "last-days", days: 7 } }),
@@ -398,10 +443,11 @@ describe("countActiveFilters and isFilterActive", () => {
 				makeFilter({
 					language: "Python",
 					tags: ["x"],
+					favoritesOnly: true,
 					dateRange: { type: "last-days", days: 30 },
 				}),
 			),
-		).toBe(3);
+		).toBe(4);
 	});
 
 	it("detects any deviation from the defaults", () => {
@@ -409,6 +455,7 @@ describe("countActiveFilters and isFilterActive", () => {
 		expect(isFilterActive(makeFilter({ query: "  " }))).toBe(false);
 		expect(isFilterActive(makeFilter({ query: "react" }))).toBe(true);
 		expect(isFilterActive(makeFilter({ tags: ["react"] }))).toBe(true);
+		expect(isFilterActive(makeFilter({ favoritesOnly: true }))).toBe(true);
 		expect(
 			isFilterActive(makeFilter({ dateRange: { type: "last-days", days: 7 } })),
 		).toBe(true);

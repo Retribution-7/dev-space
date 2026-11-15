@@ -5,6 +5,7 @@ import {
 	Delete02Icon,
 	FileCodeIcon,
 	Search01Icon,
+	StarIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -33,6 +34,7 @@ type SnippetSidebarProps = {
 	onFilterChange: (filter: SnippetsFilterState) => void;
 	onSortChange: (sort: SnippetsSortOption) => void;
 	onSelect: (snippet: Snippet) => void;
+	onToggleFavorite: (snippet: Snippet) => void;
 	onCreate: () => void;
 	onDelete: (snippet: Snippet) => void;
 };
@@ -77,6 +79,7 @@ export function SnippetSidebar({
 	onFilterChange,
 	onSortChange,
 	onSelect,
+	onToggleFavorite,
 	onCreate,
 	onDelete,
 }: SnippetSidebarProps) {
@@ -189,6 +192,39 @@ export function SnippetSidebar({
 												</span>
 											</span>
 										</button>
+
+										<Button
+											type="button"
+											variant="ghost"
+											size="icon-xs"
+											className={cn(
+												"mr-0.5",
+												snippet.isFavorite
+													? "text-primary hover:text-primary"
+													: "text-muted-foreground hover:text-foreground",
+											)}
+											title={
+												snippet.isFavorite
+													? "Remove from favorites"
+													: "Add to favorites"
+											}
+											aria-label={
+												snippet.isFavorite
+													? `Remove ${snippet.title} from favorites`
+													: `Add ${snippet.title} to favorites`
+											}
+											aria-pressed={snippet.isFavorite}
+											onClick={() => onToggleFavorite(snippet)}
+										>
+											<HugeiconsIcon
+												icon={StarIcon}
+												className={cn(
+													"size-3.5",
+													snippet.isFavorite && "fill-current",
+												)}
+												aria-hidden="true"
+											/>
+										</Button>
 
 										<Button
 											type="button"

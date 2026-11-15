@@ -77,6 +77,11 @@ export function SnippetWorkspace() {
 
 	const dirtyTabs = workspace.tabs.filter(isTabDirty);
 	const hasUnsavedChanges = dirtyTabs.length > 0;
+	const activeSavedSnippet = workspace.activeTab?.snippetId
+		? (workspace.snippets.find(
+				(item) => item.id === workspace.activeTab?.snippetId,
+			) ?? null)
+		: null;
 	const metadataTab = metadataDialog
 		? (workspace.tabs.find((tab) => tab.tabId === metadataDialog.tabId) ?? null)
 		: null;
@@ -131,6 +136,14 @@ export function SnippetWorkspace() {
 	function handleSelectSnippet(snippet: Snippet) {
 		setFeedback(null);
 		workspace.openSnippet(snippet);
+	}
+
+	function handleToggleFavorite(snippet: Snippet) {
+		try {
+			workspace.toggleFavorite(snippet);
+		} catch (error) {
+			setFeedback({ status: "error", message: errorMessage(error) });
+		}
 	}
 
 	function handleCodeChange(code: string) {
@@ -356,6 +369,7 @@ export function SnippetWorkspace() {
 					onFilterChange={setFilter}
 					onSortChange={setSort}
 					onSelect={handleSelectSnippet}
+					onToggleFavorite={handleToggleFavorite}
 					onCreate={handleCreateSnippet}
 					onDelete={handleDeleteRequest}
 				/>
@@ -370,9 +384,15 @@ export function SnippetWorkspace() {
 
 					<SnippetEditorPanel
 						tab={workspace.activeTab}
+						isFavorite={activeSavedSnippet?.isFavorite ?? false}
 						onCodeChange={handleCodeChange}
 						onSave={handleSave}
 						onEditMetadata={handleEditMetadata}
+						onToggleFavorite={() => {
+							if (activeSavedSnippet) {
+								handleToggleFavorite(activeSavedSnippet);
+							}
+						}}
 						onDelete={() => {
 							const tab = workspace.activeTab;
 

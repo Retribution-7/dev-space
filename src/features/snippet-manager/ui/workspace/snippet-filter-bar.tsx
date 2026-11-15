@@ -4,6 +4,7 @@ import {
 	Calendar01Icon,
 	Cancel01Icon,
 	Search01Icon,
+	StarIcon,
 	TagsIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -354,21 +355,49 @@ export function SnippetFilterBar({
 					</PopoverContent>
 				</Popover>
 
+				<Button
+					type="button"
+					variant={filter.favoritesOnly ? "default" : "outline"}
+					size="sm"
+					aria-pressed={filter.favoritesOnly}
+					title={
+						filter.favoritesOnly
+							? "Show all snippets"
+							: "Show favorite snippets only"
+					}
+					onClick={() =>
+						onFilterChange({
+							...filter,
+							favoritesOnly: !filter.favoritesOnly,
+						})
+					}
+				>
+					<HugeiconsIcon
+						icon={StarIcon}
+						className={cn("size-3.5", filter.favoritesOnly && "fill-current")}
+						data-icon="inline-start"
+						aria-hidden="true"
+					/>
+					Favorites
+				</Button>
+			</div>
+
+			<div className="flex items-center justify-between gap-2">
+				<p className="text-muted-foreground text-xs">
+					{resultCount === totalCount
+						? formatCount(totalCount, "snippet", "snippets")
+						: `${resultCount} of ${formatCount(totalCount, "snippet", "snippets")}`}
+					{activeFilterCount > 0
+						? ` · ${formatCount(activeFilterCount, "filter", "filters")}`
+						: ""}
+				</p>
+
 				{isActive ? (
-					<Button type="button" variant="ghost" size="sm" onClick={resetAll}>
+					<Button type="button" variant="ghost" size="xs" onClick={resetAll}>
 						Reset
 					</Button>
 				) : null}
 			</div>
-
-			<p className="text-muted-foreground text-xs">
-				{resultCount === totalCount
-					? formatCount(totalCount, "snippet", "snippets")
-					: `${resultCount} of ${formatCount(totalCount, "snippet", "snippets")}`}
-				{activeFilterCount > 0
-					? ` · ${formatCount(activeFilterCount, "filter", "filters")}`
-					: ""}
-			</p>
 		</div>
 	);
 }

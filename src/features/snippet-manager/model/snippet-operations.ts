@@ -13,6 +13,7 @@ export function createSnippet(
 		id,
 		...draft,
 		tags: [...draft.tags],
+		isFavorite: false,
 		createdAt: timestamp,
 		updatedAt: timestamp,
 	};
@@ -33,4 +34,15 @@ export function updateSnippet(
 
 export function removeSnippet(snippets: Snippet[], id: string): Snippet[] {
 	return snippets.filter((snippet) => snippet.id !== id);
+}
+
+/**
+ * Marks a snippet as favorite or not. Favoriting is not a content change,
+ * so `createdAt` and `updatedAt` stay untouched.
+ */
+export function setSnippetFavorite(
+	snippet: Snippet,
+	isFavorite: boolean,
+): Snippet {
+	return { ...snippet, isFavorite };
 }

@@ -15,6 +15,7 @@ const snippet: Snippet = {
 	code: "const debounced = useDebounce(value, 300);",
 	language: "TypeScript",
 	tags: ["react", "hooks"],
+	isFavorite: false,
 	createdAt: "2026-01-01T09:00:00.000Z",
 	updatedAt: "2026-01-02T09:00:00.000Z",
 };

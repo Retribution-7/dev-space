@@ -5,12 +5,14 @@ import {
 	CodeIcon,
 	Delete02Icon,
 	Edit02Icon,
+	StarIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { CopyButton } from "@/components/ui/copy-button";
+import { cn } from "@/shared/lib/utils";
 
 import { DEFAULT_SNIPPET_LANGUAGE } from "../../model/snippet-draft";
 import {
@@ -21,18 +23,22 @@ import {
 
 type SnippetEditorPanelProps = {
 	tab: SnippetTab | null;
+	isFavorite: boolean;
 	onCodeChange: (code: string) => void;
 	onSave: () => void;
 	onEditMetadata: () => void;
+	onToggleFavorite: () => void;
 	onDelete: () => void;
 	onCreate: () => void;
 };
 
 export function SnippetEditorPanel({
 	tab,
+	isFavorite,
 	onCodeChange,
 	onSave,
 	onEditMetadata,
+	onToggleFavorite,
 	onDelete,
 	onCreate,
 }: SnippetEditorPanelProps) {
@@ -114,6 +120,39 @@ export function SnippetEditorPanel({
 							aria-hidden="true"
 						/>
 						Details
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={tab.snippetId === null}
+						aria-pressed={isFavorite}
+						title={
+							tab.snippetId === null
+								? "Save the snippet to add it to favorites"
+								: isFavorite
+									? "Remove from favorites"
+									: "Add to favorites"
+						}
+						aria-label={
+							tab.snippetId === null
+								? "Favorites are available after saving the snippet"
+								: isFavorite
+									? "Remove snippet from favorites"
+									: "Add snippet to favorites"
+						}
+						onClick={onToggleFavorite}
+					>
+						<HugeiconsIcon
+							icon={StarIcon}
+							className={cn(
+								"size-3.5",
+								isFavorite && "text-primary fill-current",
+							)}
+							data-icon="inline-start"
+							aria-hidden="true"
+						/>
+						{isFavorite ? "Favorited" : "Favorite"}
 					</Button>
 					<CopyButton
 						getValue={() => tab.draft.code}

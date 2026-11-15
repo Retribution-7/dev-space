@@ -9,6 +9,7 @@ export type SnippetsFilterState = {
 	query: string;
 	language: string | null;
 	tags: string[];
+	favoritesOnly: boolean;
 	dateRange: SnippetsDateRange;
 };
 
@@ -18,6 +19,7 @@ export const EMPTY_SNIPPETS_FILTER: SnippetsFilterState = {
 	query: "",
 	language: null,
 	tags: [],
+	favoritesOnly: false,
 	dateRange: ALL_TIME_DATE_RANGE,
 };
 
@@ -110,6 +112,10 @@ function matchesDate(
 	}
 }
 
+function matchesFavorite(snippet: Snippet, favoritesOnly: boolean): boolean {
+	return !favoritesOnly || snippet.isFavorite === true;
+}
+
 /**
  * Returns snippets matching the search query and all active filters.
  * The source collection is never mutated.
@@ -126,6 +132,7 @@ export function filterSnippets(
 			matchesQuery(snippet, query) &&
 			matchesLanguage(snippet, filter.language) &&
 			matchesTags(snippet, filter.tags) &&
+			matchesFavorite(snippet, filter.favoritesOnly) &&
 			matchesDate(snippet, filter.dateRange, now),
 	);
 }
@@ -165,6 +172,10 @@ export function countActiveFilters(filter: SnippetsFilterState): number {
 	}
 
 	if (filter.tags.length > 0) {
+		count += 1;
+	}
+
+	if (filter.favoritesOnly) {
 		count += 1;
 	}
 

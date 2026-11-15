@@ -16,9 +16,18 @@ export function useSnippets() {
 	const snippets = useSnippetsStore((state) => state.snippets);
 	const createSnippet = useSnippetsStore((state) => state.createSnippet);
 	const updateSnippet = useSnippetsStore((state) => state.updateSnippet);
+	const setSnippetFavorite = useSnippetsStore(
+		(state) => state.setSnippetFavorite,
+	);
 	const deleteSnippet = useSnippetsStore((state) => state.deleteSnippet);
 
-	return { snippets, createSnippet, updateSnippet, deleteSnippet };
+	return {
+		snippets,
+		createSnippet,
+		updateSnippet,
+		setSnippetFavorite,
+		deleteSnippet,
+	};
 }
 
 /**

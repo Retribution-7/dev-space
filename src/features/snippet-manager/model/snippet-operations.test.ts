@@ -3,6 +3,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	createSnippet,
 	removeSnippet,
+	setSnippetFavorite,
 	updateSnippet,
 } from "./snippet-operations";
 import type { Snippet, SnippetDraft } from "./types";
@@ -24,6 +25,7 @@ function makeSnippet(overrides: Partial<Snippet> = {}): Snippet {
 	return {
 		id: "snippet-1",
 		...makeDraft(),
+		isFavorite: false,
 		createdAt: "2026-01-01T09:00:00.000Z",
 		updatedAt: "2026-01-02T09:00:00.000Z",
 		...overrides,
@@ -40,6 +42,7 @@ describe("createSnippet", () => {
 		expect(snippet).toEqual({
 			...makeDraft(),
 			id: "snippet-1",
+			isFavorite: false,
 			createdAt: TIMESTAMP,
 			updatedAt: TIMESTAMP,
 		});
@@ -84,6 +87,33 @@ describe("updateSnippet", () => {
 		updateSnippet(snippet, makeDraft({ title: "New title" }), TIMESTAMP);
 
 		expect(snippet).toEqual(original);
+	});
+});
+
+describe("setSnippetFavorite", () => {
+	it("marks a snippet as favorite and back", () => {
+		const snippet = makeSnippet();
+
+		const favorite = setSnippetFavorite(snippet, true);
+		expect(favorite.isFavorite).toBe(true);
+		expect(setSnippetFavorite(favorite, false).isFavorite).toBe(false);
+	});
+
+	it("does not change content or timestamps", () => {
+		const snippet = makeSnippet();
+
+		expect(setSnippetFavorite(snippet, true)).toEqual({
+			...snippet,
+			isFavorite: true,
+		});
+	});
+
+	it("does not mutate the original snippet", () => {
+		const snippet = makeSnippet();
+
+		setSnippetFavorite(snippet, true);
+
+		expect(snippet.isFavorite).toBe(false);
 	});
 });
 

@@ -5,6 +5,7 @@ import { normalizeSnippetDraft } from "./snippet-draft";
 import {
 	createSnippet as createSnippetRecord,
 	removeSnippet,
+	setSnippetFavorite as setSnippetFavoriteRecord,
 	updateSnippet as updateSnippetRecord,
 } from "./snippet-operations";
 import { validateSnippetDraft } from "./snippet-validation";
@@ -23,6 +24,7 @@ export type SnippetsState = {
 	setHasHydrated: (hasHydrated: boolean) => void;
 	createSnippet: (draft: SnippetDraft) => Snippet;
 	updateSnippet: (id: string, draft: SnippetDraft) => Snippet;
+	setSnippetFavorite: (id: string, isFavorite: boolean) => Snippet;
 	deleteSnippet: (id: string) => void;
 };
 
@@ -89,6 +91,24 @@ export function createSnippetsStore(
 
 				deleteSnippet(id) {
 					set((state) => ({ snippets: removeSnippet(state.snippets, id) }));
+				},
+
+				setSnippetFavorite(id, isFavorite) {
+					const current = get().snippets.find((snippet) => snippet.id === id);
+
+					if (!current) {
+						throw new Error("Snippet not found.");
+					}
+
+					const snippet = setSnippetFavoriteRecord(current, isFavorite);
+
+					set((state) => ({
+						snippets: state.snippets.map((item) =>
+							item.id === id ? snippet : item,
+						),
+					}));
+
+					return snippet;
 				},
 			}),
 			{

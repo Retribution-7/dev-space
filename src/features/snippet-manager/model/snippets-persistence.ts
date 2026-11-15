@@ -61,6 +61,8 @@ export function normalizeStoredSnippet(value: unknown): Snippet | null {
 				? value.tags.filter((tag): tag is string => typeof tag === "string")
 				: [],
 		),
+		// Snippets saved before favorites existed have no flag and stay regular.
+		isFavorite: value.isFavorite === true,
 		createdAt,
 		updatedAt: normalizeStoredDate(value.updatedAt, createdAt),
 	};

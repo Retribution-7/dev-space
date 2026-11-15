@@ -16,6 +16,7 @@ function makeSnippet(overrides: Partial<Snippet> = {}): Snippet {
 		code: "code",
 		language: "TypeScript",
 		tags: [],
+		isFavorite: false,
 		createdAt: "2026-01-01T09:00:00.000Z",
 		updatedAt: "2026-01-10T09:00:00.000Z",
 		...overrides,

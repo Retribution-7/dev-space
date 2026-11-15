@@ -28,6 +28,7 @@ function makeSnippet(overrides: Partial<Snippet> = {}): Snippet {
 		code: "const value = 1;",
 		language: "TypeScript",
 		tags: ["react"],
+		isFavorite: false,
 		createdAt: "2026-01-01T09:00:00.000Z",
 		updatedAt: "2026-01-02T09:00:00.000Z",
 		...overrides,

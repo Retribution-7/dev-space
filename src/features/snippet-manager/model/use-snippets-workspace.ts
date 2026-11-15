@@ -27,8 +27,13 @@ import { useSnippets } from "./use-snippets";
  * save actions; drafts stay local to their tabs until then.
  */
 export function useSnippetsWorkspace() {
-	const { snippets, createSnippet, updateSnippet, deleteSnippet } =
-		useSnippets();
+	const {
+		snippets,
+		createSnippet,
+		updateSnippet,
+		setSnippetFavorite,
+		deleteSnippet,
+	} = useSnippets();
 	const [state, setState] =
 		React.useState<SnippetsWorkspaceState>(createWorkspaceState);
 
@@ -87,6 +92,13 @@ export function useSnippetsWorkspace() {
 		setState((current) => removeSnippetTabs(current, snippetId));
 	}
 
+	/**
+	 * Marks a snippet as favorite without touching tabs or drafts.
+	 */
+	function toggleFavorite(snippet: Snippet) {
+		return setSnippetFavorite(snippet.id, !snippet.isFavorite);
+	}
+
 	return {
 		snippets,
 		tabs: state.tabs,
@@ -100,6 +112,7 @@ export function useSnippetsWorkspace() {
 		closeTab,
 		saveNewSnippet,
 		saveTabChanges,
+		toggleFavorite,
 		removeSnippet,
 	};
 }
