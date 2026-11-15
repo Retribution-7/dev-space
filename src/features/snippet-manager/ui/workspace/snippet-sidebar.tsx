@@ -3,9 +3,11 @@
 import {
 	Add01Icon,
 	Delete02Icon,
+	Download01Icon,
 	FileCodeIcon,
 	Search01Icon,
 	StarIcon,
+	Upload01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -33,6 +35,8 @@ type SnippetSidebarProps = {
 	availableTags: string[];
 	onFilterChange: (filter: SnippetsFilterState) => void;
 	onSortChange: (sort: SnippetsSortOption) => void;
+	onImport: () => void;
+	onExport: () => void;
 	onSelect: (snippet: Snippet) => void;
 	onToggleFavorite: (snippet: Snippet) => void;
 	onCreate: () => void;
@@ -78,6 +82,8 @@ export function SnippetSidebar({
 	availableTags,
 	onFilterChange,
 	onSortChange,
+	onImport,
+	onExport,
 	onSelect,
 	onToggleFavorite,
 	onCreate,
@@ -95,6 +101,27 @@ export function SnippetSidebar({
 						aria-hidden="true"
 					/>
 					New Snippet
+				</Button>
+			</div>
+
+			<div className="grid grid-cols-2 gap-1.5 border-b p-2">
+				<Button type="button" variant="outline" size="sm" onClick={onImport}>
+					<HugeiconsIcon
+						icon={Upload01Icon}
+						className="size-3.5"
+						data-icon="inline-start"
+						aria-hidden="true"
+					/>
+					Import
+				</Button>
+				<Button type="button" variant="outline" size="sm" onClick={onExport}>
+					<HugeiconsIcon
+						icon={Download01Icon}
+						className="size-3.5"
+						data-icon="inline-start"
+						aria-hidden="true"
+					/>
+					Export
 				</Button>
 			</div>
 

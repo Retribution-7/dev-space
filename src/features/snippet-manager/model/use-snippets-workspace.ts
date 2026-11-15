@@ -33,6 +33,7 @@ export function useSnippetsWorkspace() {
 		updateSnippet,
 		setSnippetFavorite,
 		deleteSnippet,
+		importSnippets,
 	} = useSnippets();
 	const [state, setState] =
 		React.useState<SnippetsWorkspaceState>(createWorkspaceState);
@@ -99,6 +100,14 @@ export function useSnippetsWorkspace() {
 		return setSnippetFavorite(snippet.id, !snippet.isFavorite);
 	}
 
+	/**
+	 * Adds a batch of validated snippets. Existing records are never
+	 * overwritten and open tabs and drafts are not touched.
+	 */
+	function addImportedSnippets(records: Snippet[]) {
+		return importSnippets(records);
+	}
+
 	return {
 		snippets,
 		tabs: state.tabs,
@@ -113,6 +122,7 @@ export function useSnippetsWorkspace() {
 		saveNewSnippet,
 		saveTabChanges,
 		toggleFavorite,
+		addImportedSnippets,
 		removeSnippet,
 	};
 }

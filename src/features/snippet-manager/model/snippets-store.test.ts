@@ -68,6 +68,22 @@ function makeStoredSnippet(overrides: Partial<Snippet> = {}): string {
 	});
 }
 
+function makeRecord(overrides: Partial<Snippet> = {}): Snippet {
+	return {
+		id: "record-1",
+		title: "Imported snippet",
+		description: "",
+		code: "imported();",
+		language: "TypeScript",
+		category: "General",
+		tags: [],
+		isFavorite: false,
+		createdAt: "2026-01-01T09:00:00.000Z",
+		updatedAt: "2026-01-02T09:00:00.000Z",
+		...overrides,
+	};
+}
+
 describe("snippets store", () => {
 	it("restores saved snippets and reports hydration", () => {
 		const { store } = createTestStore({
@@ -280,5 +296,60 @@ describe("snippets store", () => {
 
 		const stored = JSON.parse(data.get(SNIPPETS_STORAGE_KEY) ?? "null");
 		expect(stored.state.snippets[0].category).toBe("DevOps");
+	});
+
+	it("imports snippets in batch without overwriting existing ones", () => {
+		const { store } = createTestStore();
+		const created = store.getState().createSnippet(makeDraft());
+
+		const added = store
+			.getState()
+			.importSnippets([
+				makeRecord({ id: "imported-1", title: "Imported" }),
+				makeRecord({ id: created.id, title: "Conflicting" }),
+			]);
+
+		expect(added.map((snippet) => snippet.id)).toEqual(["imported-1"]);
+		expect(store.getState().snippets.map((snippet) => snippet.id)).toEqual([
+			"imported-1",
+			created.id,
+		]);
+		expect(
+			store.getState().snippets.find((snippet) => snippet.id === created.id)
+				?.title,
+		).toBe("Debounce hook");
+	});
+
+	it("does not add duplicate ids inside a single import", () => {
+		const { store } = createTestStore();
+
+		const added = store
+			.getState()
+			.importSnippets([
+				makeRecord({ id: "same" }),
+				makeRecord({ id: "same", title: "Second" }),
+			]);
+
+		expect(added).toHaveLength(1);
+		expect(store.getState().snippets).toHaveLength(1);
+	});
+
+	it("keeps the store unchanged for an empty import", () => {
+		const { store } = createTestStore();
+		const created = store.getState().createSnippet(makeDraft());
+
+		expect(store.getState().importSnippets([])).toEqual([]);
+		expect(store.getState().snippets).toEqual([created]);
+	});
+
+	it("persists imported snippets", () => {
+		const { store, data } = createTestStore();
+
+		store.getState().importSnippets([makeRecord({ id: "imported-1" })]);
+
+		const stored = JSON.parse(data.get(SNIPPETS_STORAGE_KEY) ?? "null");
+		expect(stored.state.snippets.map((snippet: Snippet) => snippet.id)).toEqual(
+			["imported-1"],
+		);
 	});
 });

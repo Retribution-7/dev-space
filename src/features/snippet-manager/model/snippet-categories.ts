@@ -22,6 +22,17 @@ export function isSnippetCategory(value: unknown): value is SnippetCategory {
 	);
 }
 
+/** Canonical category name for user-facing values, when it is supported. */
+export function findSnippetCategory(value: string): SnippetCategory | null {
+	const normalized = value.trim().toLowerCase();
+
+	return (
+		SNIPPET_CATEGORIES.find(
+			(category) => category.toLowerCase() === normalized,
+		) ?? null
+	);
+}
+
 /**
  * Returns the given category when it is known and the default one otherwise.
  * Unknown categories are never saved as they are.

@@ -26,6 +26,7 @@ export type SnippetsState = {
 	updateSnippet: (id: string, draft: SnippetDraft) => Snippet;
 	setSnippetFavorite: (id: string, isFavorite: boolean) => Snippet;
 	deleteSnippet: (id: string) => void;
+	importSnippets: (records: Snippet[]) => Snippet[];
 };
 
 function normalizeAndValidate(draft: SnippetDraft): SnippetDraft {
@@ -91,6 +92,26 @@ export function createSnippetsStore(
 
 				deleteSnippet(id) {
 					set((state) => ({ snippets: removeSnippet(state.snippets, id) }));
+				},
+
+				importSnippets(records) {
+					const existingIds = new Set(
+						get().snippets.map((snippet) => snippet.id),
+					);
+					const added: Snippet[] = [];
+
+					for (const record of records) {
+						if (existingIds.has(record.id)) {
+							continue;
+						}
+
+						existingIds.add(record.id);
+						added.push({ ...record, tags: [...record.tags] });
+					}
+
+					set((state) => ({ snippets: [...added, ...state.snippets] }));
+
+					return added;
 				},
 
 				setSnippetFavorite(id, isFavorite) {

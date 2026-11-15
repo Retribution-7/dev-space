@@ -23,6 +23,8 @@ import { ConfirmDialog } from "../confirm-dialog";
 import { FeedbackBanner, type WorkspaceFeedback } from "../feedback-banner";
 
 import { SnippetEditorPanel } from "./snippet-editor-panel";
+import { SnippetExportDialog } from "./snippet-export-dialog";
+import { SnippetImportDialog } from "./snippet-import-dialog";
 import { SnippetMetadataDialog } from "./snippet-metadata-dialog";
 import { SnippetSidebar } from "./snippet-sidebar";
 import { SnippetTabBar } from "./snippet-tab-bar";
@@ -60,6 +62,9 @@ export function SnippetWorkspace() {
 		React.useState<MetadataDialogState | null>(null);
 	const [pendingAction, setPendingAction] =
 		React.useState<PendingAction | null>(null);
+	const [ioDialog, setIoDialog] = React.useState<"import" | "export" | null>(
+		null,
+	);
 	const [filter, setFilter] = React.useState<SnippetsFilterState>(
 		EMPTY_SNIPPETS_FILTER,
 	);
@@ -334,6 +339,20 @@ export function SnippetWorkspace() {
 		setDeleteTarget(snippet);
 	}
 
+	function handleImport(records: Snippet[], message: string) {
+		try {
+			workspace.addImportedSnippets(records);
+			setFeedback({ status: "success", message });
+		} catch {
+			setFeedback({
+				status: "error",
+				message: "Could not import the snippets. Please try again.",
+			});
+		}
+
+		setIoDialog(null);
+	}
+
 	function handleDeleteConfirm() {
 		if (!deleteTarget) {
 			return;
@@ -368,6 +387,14 @@ export function SnippetWorkspace() {
 					availableTags={availableTags}
 					onFilterChange={setFilter}
 					onSortChange={setSort}
+					onImport={() => {
+						setFeedback(null);
+						setIoDialog("import");
+					}}
+					onExport={() => {
+						setFeedback(null);
+						setIoDialog("export");
+					}}
 					onSelect={handleSelectSnippet}
 					onToggleFavorite={handleToggleFavorite}
 					onCreate={handleCreateSnippet}
@@ -423,6 +450,32 @@ export function SnippetWorkspace() {
 						}
 					}}
 					onSubmit={handleMetadataSubmit}
+				/>
+			) : null}
+
+			{ioDialog === "export" ? (
+				<SnippetExportDialog
+					open
+					snippets={workspace.snippets}
+					onOpenChange={(open) => {
+						if (!open) {
+							setIoDialog(null);
+						}
+					}}
+					onFeedback={setFeedback}
+				/>
+			) : null}
+
+			{ioDialog === "import" ? (
+				<SnippetImportDialog
+					open
+					existingSnippets={workspace.snippets}
+					onOpenChange={(open) => {
+						if (!open) {
+							setIoDialog(null);
+						}
+					}}
+					onImport={handleImport}
 				/>
 			) : null}
 
