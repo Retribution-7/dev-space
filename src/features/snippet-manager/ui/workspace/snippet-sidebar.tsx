@@ -16,6 +16,7 @@ import {
 	EMPTY_SNIPPETS_FILTER,
 	type SnippetsFilterState,
 } from "../../model/snippets-filter";
+import type { SnippetsSortOption } from "../../model/snippets-sort";
 import type { Snippet } from "../../model/types";
 
 import { SnippetFilterBar } from "./snippet-filter-bar";
@@ -26,9 +27,11 @@ type SnippetSidebarProps = {
 	activeSnippetId: string | null;
 	isLoading?: boolean;
 	filter: SnippetsFilterState;
+	sort: SnippetsSortOption;
 	availableLanguages: string[];
 	availableTags: string[];
 	onFilterChange: (filter: SnippetsFilterState) => void;
+	onSortChange: (sort: SnippetsSortOption) => void;
 	onSelect: (snippet: Snippet) => void;
 	onCreate: () => void;
 	onDelete: (snippet: Snippet) => void;
@@ -68,9 +71,11 @@ export function SnippetSidebar({
 	activeSnippetId,
 	isLoading = false,
 	filter,
+	sort,
 	availableLanguages,
 	availableTags,
 	onFilterChange,
+	onSortChange,
 	onSelect,
 	onCreate,
 	onDelete,
@@ -93,11 +98,13 @@ export function SnippetSidebar({
 			{totalCount > 0 ? (
 				<SnippetFilterBar
 					filter={filter}
+					sort={sort}
 					availableLanguages={availableLanguages}
 					availableTags={availableTags}
 					totalCount={totalCount}
 					resultCount={snippets.length}
 					onFilterChange={onFilterChange}
+					onSortChange={onSortChange}
 				/>
 			) : null}
 

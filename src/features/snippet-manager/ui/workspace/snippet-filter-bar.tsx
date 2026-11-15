@@ -30,6 +30,10 @@ import {
 	type SnippetsDateRange,
 	type SnippetsFilterState,
 } from "../../model/snippets-filter";
+import {
+	SNIPPET_SORT_OPTIONS,
+	type SnippetsSortOption,
+} from "../../model/snippets-sort";
 
 const ALL_LANGUAGES_VALUE = "";
 const ALL_LANGUAGES_LABEL = "All Languages";
@@ -88,20 +92,24 @@ function ToggleChip({
 
 type SnippetFilterBarProps = {
 	filter: SnippetsFilterState;
+	sort: SnippetsSortOption;
 	availableLanguages: string[];
 	availableTags: string[];
 	totalCount: number;
 	resultCount: number;
 	onFilterChange: (filter: SnippetsFilterState) => void;
+	onSortChange: (sort: SnippetsSortOption) => void;
 };
 
 export function SnippetFilterBar({
 	filter,
+	sort,
 	availableLanguages,
 	availableTags,
 	totalCount,
 	resultCount,
 	onFilterChange,
+	onSortChange,
 }: SnippetFilterBarProps) {
 	const [pendingRange, setPendingRange] = React.useState<DateRange | undefined>(
 		undefined,
@@ -189,6 +197,21 @@ export function SnippetFilterBar({
 					</Button>
 				) : null}
 			</div>
+
+			<Select
+				value={sort}
+				onChange={(event) =>
+					onSortChange(event.target.value as SnippetsSortOption)
+				}
+				aria-label="Sort snippets"
+				className="h-7 px-2 text-xs md:text-xs"
+			>
+				{SNIPPET_SORT_OPTIONS.map((option) => (
+					<option key={option.value} value={option.value}>
+						{option.label}
+					</option>
+				))}
+			</Select>
 
 			<div className="grid grid-cols-2 gap-1.5">
 				<Select

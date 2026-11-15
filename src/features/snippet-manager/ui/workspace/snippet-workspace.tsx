@@ -10,6 +10,11 @@ import {
 	getAvailableTags,
 	type SnippetsFilterState,
 } from "../../model/snippets-filter";
+import {
+	DEFAULT_SNIPPET_SORT,
+	type SnippetsSortOption,
+	sortSnippets,
+} from "../../model/snippets-sort";
 import { isTabDirty } from "../../model/snippets-workspace";
 import type { Snippet, SnippetDraft } from "../../model/types";
 import { useSnippetsHydration } from "../../model/use-snippets";
@@ -58,10 +63,15 @@ export function SnippetWorkspace() {
 	const [filter, setFilter] = React.useState<SnippetsFilterState>(
 		EMPTY_SNIPPETS_FILTER,
 	);
+	const [sort, setSort] =
+		React.useState<SnippetsSortOption>(DEFAULT_SNIPPET_SORT);
 
-	// Search and filters only affect the sidebar list: tabs, drafts, and the
-	// active tab are never touched.
-	const filteredSnippets = filterSnippets(workspace.snippets, filter);
+	// Search, filters, and sorting only affect the sidebar list: tabs, drafts,
+	// and the active tab are never touched.
+	const visibleSnippets = sortSnippets(
+		filterSnippets(workspace.snippets, filter),
+		sort,
+	);
 	const availableLanguages = getAvailableLanguages(workspace.snippets);
 	const availableTags = getAvailableTags(workspace.snippets);
 
@@ -335,14 +345,16 @@ export function SnippetWorkspace() {
 
 			<div className="bg-card flex h-[min(75vh,44rem)] min-h-[30rem] flex-col overflow-hidden rounded-xl border shadow-xs lg:flex-row">
 				<SnippetSidebar
-					snippets={filteredSnippets}
+					snippets={visibleSnippets}
 					totalCount={workspace.snippets.length}
 					activeSnippetId={workspace.activeTab?.snippetId ?? null}
 					isLoading={!isHydrated}
 					filter={filter}
+					sort={sort}
 					availableLanguages={availableLanguages}
 					availableTags={availableTags}
 					onFilterChange={setFilter}
+					onSortChange={setSort}
 					onSelect={handleSelectSnippet}
 					onCreate={handleCreateSnippet}
 					onDelete={handleDeleteRequest}
