@@ -4,6 +4,7 @@ import {
 	Add01Icon,
 	Delete02Icon,
 	FileCodeIcon,
+	Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -11,12 +12,23 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
+import {
+	EMPTY_SNIPPETS_FILTER,
+	type SnippetsFilterState,
+} from "../../model/snippets-filter";
 import type { Snippet } from "../../model/types";
+
+import { SnippetFilterBar } from "./snippet-filter-bar";
 
 type SnippetSidebarProps = {
 	snippets: Snippet[];
+	totalCount: number;
 	activeSnippetId: string | null;
 	isLoading?: boolean;
+	filter: SnippetsFilterState;
+	availableLanguages: string[];
+	availableTags: string[];
+	onFilterChange: (filter: SnippetsFilterState) => void;
 	onSelect: (snippet: Snippet) => void;
 	onCreate: () => void;
 	onDelete: (snippet: Snippet) => void;
@@ -42,16 +54,29 @@ function SnippetSidebarSkeleton() {
 	);
 }
 
+function EmptyStateIcon({ icon }: { icon: typeof FileCodeIcon }) {
+	return (
+		<span className="bg-muted text-muted-foreground grid size-10 place-items-center rounded-full">
+			<HugeiconsIcon icon={icon} className="size-5" aria-hidden="true" />
+		</span>
+	);
+}
+
 export function SnippetSidebar({
 	snippets,
+	totalCount,
 	activeSnippetId,
 	isLoading = false,
+	filter,
+	availableLanguages,
+	availableTags,
+	onFilterChange,
 	onSelect,
 	onCreate,
 	onDelete,
 }: SnippetSidebarProps) {
 	return (
-		<aside className="bg-muted/30 flex max-h-56 min-h-0 w-full flex-col border-b lg:max-h-none lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0 xl:w-72">
+		<aside className="bg-muted/30 flex max-h-72 min-h-0 w-full flex-col border-b lg:max-h-none lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0 xl:w-72">
 			<div className="flex items-center justify-between gap-2 border-b px-3 py-2.5">
 				<h2 className="text-sm font-semibold">Snippets</h2>
 				<Button type="button" size="xs" onClick={onCreate}>
@@ -65,18 +90,23 @@ export function SnippetSidebar({
 				</Button>
 			</div>
 
+			{totalCount > 0 ? (
+				<SnippetFilterBar
+					filter={filter}
+					availableLanguages={availableLanguages}
+					availableTags={availableTags}
+					totalCount={totalCount}
+					resultCount={snippets.length}
+					onFilterChange={onFilterChange}
+				/>
+			) : null}
+
 			<div className="min-h-0 flex-1 overflow-y-auto p-2">
 				{isLoading ? (
 					<SnippetSidebarSkeleton />
-				) : snippets.length === 0 ? (
+				) : totalCount === 0 ? (
 					<div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-						<span className="bg-muted text-muted-foreground grid size-10 place-items-center rounded-full">
-							<HugeiconsIcon
-								icon={FileCodeIcon}
-								className="size-5"
-								aria-hidden="true"
-							/>
-						</span>
+						<EmptyStateIcon icon={FileCodeIcon} />
 						<div>
 							<p className="text-sm font-medium">No snippets yet</p>
 							<p className="text-muted-foreground mt-1 text-xs leading-5">
@@ -96,6 +126,24 @@ export function SnippetSidebar({
 								aria-hidden="true"
 							/>
 							New Snippet
+						</Button>
+					</div>
+				) : snippets.length === 0 ? (
+					<div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+						<EmptyStateIcon icon={Search01Icon} />
+						<div>
+							<p className="text-sm font-medium">No matching snippets</p>
+							<p className="text-muted-foreground mt-1 text-xs leading-5">
+								Try different search terms or reset the filters.
+							</p>
+						</div>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onClick={() => onFilterChange(EMPTY_SNIPPETS_FILTER)}
+						>
+							Reset search and filters
 						</Button>
 					</div>
 				) : (

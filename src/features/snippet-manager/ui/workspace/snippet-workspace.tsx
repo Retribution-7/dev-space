@@ -3,6 +3,13 @@
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import {
+	EMPTY_SNIPPETS_FILTER,
+	filterSnippets,
+	getAvailableLanguages,
+	getAvailableTags,
+	type SnippetsFilterState,
+} from "../../model/snippets-filter";
 import { isTabDirty } from "../../model/snippets-workspace";
 import type { Snippet, SnippetDraft } from "../../model/types";
 import { useSnippetsHydration } from "../../model/use-snippets";
@@ -48,6 +55,15 @@ export function SnippetWorkspace() {
 		React.useState<MetadataDialogState | null>(null);
 	const [pendingAction, setPendingAction] =
 		React.useState<PendingAction | null>(null);
+	const [filter, setFilter] = React.useState<SnippetsFilterState>(
+		EMPTY_SNIPPETS_FILTER,
+	);
+
+	// Search and filters only affect the sidebar list: tabs, drafts, and the
+	// active tab are never touched.
+	const filteredSnippets = filterSnippets(workspace.snippets, filter);
+	const availableLanguages = getAvailableLanguages(workspace.snippets);
+	const availableTags = getAvailableTags(workspace.snippets);
 
 	const dirtyTabs = workspace.tabs.filter(isTabDirty);
 	const hasUnsavedChanges = dirtyTabs.length > 0;
@@ -319,9 +335,14 @@ export function SnippetWorkspace() {
 
 			<div className="bg-card flex h-[min(75vh,44rem)] min-h-[30rem] flex-col overflow-hidden rounded-xl border shadow-xs lg:flex-row">
 				<SnippetSidebar
-					snippets={workspace.snippets}
+					snippets={filteredSnippets}
+					totalCount={workspace.snippets.length}
 					activeSnippetId={workspace.activeTab?.snippetId ?? null}
 					isLoading={!isHydrated}
+					filter={filter}
+					availableLanguages={availableLanguages}
+					availableTags={availableTags}
+					onFilterChange={setFilter}
 					onSelect={handleSelectSnippet}
 					onCreate={handleCreateSnippet}
 					onDelete={handleDeleteRequest}
