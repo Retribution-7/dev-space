@@ -2,6 +2,7 @@
 
 import {
 	AlertCircleIcon,
+	CheckmarkCircleIcon,
 	FileBracesIcon,
 	FileDiffIcon,
 	GitCompareIcon,
@@ -18,7 +19,10 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
+import { DownloadButton } from "@/components/ui/download-button";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 import { JsonEditor, type JsonEditorHandle } from "@/components/ui/json-editor";
+import { cn } from "@/shared/lib/utils";
 
 import { compareJson } from "../model/compare-json";
 import type {
@@ -32,6 +36,11 @@ import { JsonDiffList } from "./json-diff-list";
 type CompareStudioProps = {
 	initialOriginal?: string;
 	initialModified?: string;
+};
+
+type CompareFileFeedback = {
+	status: "success" | "error";
+	message: string;
 };
 
 const EMPTY_EDITOR_MESSAGE = "The editor is empty. Add some JSON first.";
@@ -51,10 +60,13 @@ export function CompareStudio({
 	const [differences, setDifferences] = React.useState<JsonDifference[] | null>(
 		null,
 	);
+	const [fileFeedback, setFileFeedback] =
+		React.useState<CompareFileFeedback | null>(null);
 
 	const resetComparison = React.useCallback(() => {
 		setIssues([]);
 		setDifferences(null);
+		setFileFeedback(null);
 	}, []);
 
 	const handleOriginalChange = React.useCallback(() => {
@@ -65,12 +77,69 @@ export function CompareStudio({
 		resetComparison();
 	}, [resetComparison]);
 
+	const handleOriginalUpload = React.useCallback(
+		(content: string, fileName: string) => {
+			const editor = originalEditorRef.current;
+
+			if (!editor) {
+				return;
+			}
+
+			editor.setValue(content);
+			resetComparison();
+			setFileFeedback({
+				status: "success",
+				message: `Loaded "${fileName}" into Original JSON.`,
+			});
+		},
+		[resetComparison],
+	);
+
+	const handleModifiedUpload = React.useCallback(
+		(content: string, fileName: string) => {
+			const editor = modifiedEditorRef.current;
+
+			if (!editor) {
+				return;
+			}
+
+			editor.setValue(content);
+			resetComparison();
+			setFileFeedback({
+				status: "success",
+				message: `Loaded "${fileName}" into Modified JSON.`,
+			});
+		},
+		[resetComparison],
+	);
+
+	const handleOriginalUploadError = React.useCallback((message: string) => {
+		setFileFeedback({ status: "error", message: `Original JSON: ${message}` });
+	}, []);
+
+	const handleModifiedUploadError = React.useCallback((message: string) => {
+		setFileFeedback({ status: "error", message: `Modified JSON: ${message}` });
+	}, []);
+
+	const handleDownloadSuccess = React.useCallback((fileName: string) => {
+		setFileFeedback({
+			status: "success",
+			message: `Downloaded "${fileName}".`,
+		});
+	}, []);
+
+	const handleDownloadError = React.useCallback((message: string) => {
+		setFileFeedback({ status: "error", message });
+	}, []);
+
 	const handleCompare = React.useCallback(() => {
 		const originalValue =
 			originalEditorRef.current?.getValue() ?? initialOriginal;
 		const modifiedValue =
 			modifiedEditorRef.current?.getValue() ?? initialModified;
 		const result = compareJson(originalValue, modifiedValue);
+
+		setFileFeedback(null);
 
 		if (result.status === "error") {
 			setIssues(result.issues);
@@ -114,6 +183,33 @@ export function CompareStudio({
 						Compare
 					</Button>
 				</CardHeader>
+				{fileFeedback ? (
+					<div
+						role={fileFeedback.status === "error" ? "alert" : "status"}
+						className={cn(
+							"flex items-start gap-2 border-b px-4 py-2.5 text-sm",
+							fileFeedback.status === "error"
+								? "border-destructive/20 bg-destructive/5"
+								: "border-emerald-500/20 bg-emerald-500/5",
+						)}
+					>
+						<HugeiconsIcon
+							icon={
+								fileFeedback.status === "error"
+									? AlertCircleIcon
+									: CheckmarkCircleIcon
+							}
+							className={cn(
+								"mt-0.5 size-4 shrink-0",
+								fileFeedback.status === "error"
+									? "text-destructive"
+									: "text-emerald-600 dark:text-emerald-400",
+							)}
+							aria-hidden="true"
+						/>
+						<p className="min-w-0">{fileFeedback.message}</p>
+					</div>
+				) : null}
 				{issues.length > 0 ? (
 					<div
 						role="alert"
@@ -144,7 +240,12 @@ export function CompareStudio({
 							description="Source document"
 							ariaLabel="Original JSON editor"
 							editorRef={originalEditorRef}
-							getCopyValue={() => originalEditorRef.current?.getValue() ?? ""}
+							getValue={() => originalEditorRef.current?.getValue() ?? ""}
+							downloadFileName="original.json"
+							onUpload={handleOriginalUpload}
+							onUploadError={handleOriginalUploadError}
+							onDownloadSuccess={handleDownloadSuccess}
+							onDownloadError={handleDownloadError}
 							initialValue={initialOriginal}
 							onChange={handleOriginalChange}
 						/>
@@ -154,7 +255,12 @@ export function CompareStudio({
 							description="Changed document"
 							ariaLabel="Modified JSON editor"
 							editorRef={modifiedEditorRef}
-							getCopyValue={() => modifiedEditorRef.current?.getValue() ?? ""}
+							getValue={() => modifiedEditorRef.current?.getValue() ?? ""}
+							downloadFileName="modified.json"
+							onUpload={handleModifiedUpload}
+							onUploadError={handleModifiedUploadError}
+							onDownloadSuccess={handleDownloadSuccess}
+							onDownloadError={handleDownloadError}
 							initialValue={initialModified}
 							onChange={handleModifiedChange}
 						/>
@@ -176,7 +282,12 @@ function EditorPanel({
 	description,
 	ariaLabel,
 	editorRef,
-	getCopyValue,
+	getValue,
+	downloadFileName,
+	onUpload,
+	onUploadError,
+	onDownloadSuccess,
+	onDownloadError,
 	initialValue,
 	onChange,
 }: {
@@ -185,13 +296,18 @@ function EditorPanel({
 	description: string;
 	ariaLabel: string;
 	editorRef: React.Ref<JsonEditorHandle>;
-	getCopyValue: () => string;
+	getValue: () => string;
+	downloadFileName: string;
+	onUpload: (content: string, fileName: string) => void;
+	onUploadError: (message: string) => void;
+	onDownloadSuccess: (fileName: string) => void;
+	onDownloadError: (message: string) => void;
 	initialValue: string;
 	onChange: () => void;
 }) {
 	return (
 		<section aria-labelledby={headingId} className="flex min-w-0 flex-col">
-			<div className="bg-muted/30 flex items-center justify-between gap-2 border-b px-4 py-2">
+			<div className="bg-muted/30 flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
 				<div className="flex min-w-0 items-center gap-2">
 					<span className="bg-secondary text-secondary-foreground grid size-6 shrink-0 place-items-center rounded-md">
 						<HugeiconsIcon
@@ -204,12 +320,28 @@ function EditorPanel({
 						{title}
 					</h3>
 				</div>
-				<div className="flex shrink-0 items-center gap-2">
+				<div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
 					<span className="text-muted-foreground hidden text-[0.7rem] sm:inline">
 						{description}
 					</span>
+					<FileUploadButton
+						onFileLoad={onUpload}
+						onError={onUploadError}
+						ariaLabel={`Upload ${title} from a JSON file`}
+						variant="outline"
+						size="xs"
+					/>
+					<DownloadButton
+						getValue={getValue}
+						fileName={downloadFileName}
+						onSuccess={onDownloadSuccess}
+						onError={onDownloadError}
+						ariaLabel={`Download ${title} as ${downloadFileName}`}
+						variant="outline"
+						size="xs"
+					/>
 					<CopyButton
-						getValue={getCopyValue}
+						getValue={getValue}
 						ariaLabel={`Copy ${title} contents`}
 						variant="outline"
 						size="xs"

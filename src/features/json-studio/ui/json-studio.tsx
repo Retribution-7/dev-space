@@ -22,6 +22,8 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
+import { DownloadButton } from "@/components/ui/download-button";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 import { JsonEditor, type JsonEditorHandle } from "@/components/ui/json-editor";
 
 import { formatJson } from "../model/format-json";
@@ -133,9 +135,38 @@ export function JsonStudio({ initialValue }: JsonStudioProps) {
 		}
 	}, [viewMode]);
 
+	const handleUpload = React.useCallback(
+		(content: string, fileName: string) => {
+			const editor = editorRef.current;
+
+			if (!editor) {
+				return;
+			}
+
+			editor.setValue(content);
+			setErrorMessage(null);
+			setSuccessMessage(`Loaded "${fileName}".`);
+
+			if (viewMode === "tree") {
+				setTreeSnapshot(parseJson(content));
+			}
+		},
+		[viewMode],
+	);
+
+	const handleFileError = React.useCallback((message: string) => {
+		setSuccessMessage(null);
+		setErrorMessage(message);
+	}, []);
+
+	const handleDownloadSuccess = React.useCallback((fileName: string) => {
+		setErrorMessage(null);
+		setSuccessMessage(`Downloaded "${fileName}".`);
+	}, []);
+
 	return (
 		<Card className="gap-0 py-0 shadow-xs">
-			<CardHeader className="flex flex-row items-center gap-3 border-b">
+			<CardHeader className="flex flex-row flex-wrap items-center gap-3 border-b">
 				<span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-lg">
 					<HugeiconsIcon
 						icon={FileBracesIcon}
@@ -149,10 +180,22 @@ export function JsonStudio({ initialValue }: JsonStudioProps) {
 						Syntax highlighting, line numbers, and word wrap are enabled.
 					</CardDescription>
 				</div>
-				<div className="flex shrink-0 items-center gap-2">
+				<div className="flex flex-wrap items-center justify-end gap-2">
 					<span className="bg-muted text-muted-foreground hidden rounded-md border px-2 py-1 font-mono text-[0.7rem] sm:inline-flex">
 						JSON
 					</span>
+					<FileUploadButton
+						onFileLoad={handleUpload}
+						onError={handleFileError}
+						ariaLabel="Upload a JSON file into the editor"
+					/>
+					<DownloadButton
+						getValue={() => editorRef.current?.getValue() ?? ""}
+						fileName="data.json"
+						onSuccess={handleDownloadSuccess}
+						onError={handleFileError}
+						ariaLabel="Download JSON editor contents as data.json"
+					/>
 					<Button
 						type="button"
 						variant="outline"
