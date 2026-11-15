@@ -3,6 +3,7 @@ import {
 	CodeFolderIcon,
 	FileBracesIcon,
 	FileTextIcon,
+	GitCompareIcon,
 	PaletteIcon,
 	RegexIcon,
 } from "@hugeicons/core-free-icons";
@@ -13,6 +14,12 @@ export const toolNavItems = [
 		title: "JSON Studio",
 		url: "/json",
 		icon: FileBracesIcon,
+	},
+	{
+		id: "compare",
+		title: "Compare",
+		url: "/compare",
+		icon: GitCompareIcon,
 	},
 	{
 		id: "snippet-manager",
