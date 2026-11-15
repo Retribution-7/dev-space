@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/use-theme";
 const SECTION_TITLES: Record<string, string> = {
 	"/dashboard": "Dashboard",
 	"/json": "JSON Studio",
+	"/compare": "Compare",
 	"/snippets": "Snippet Manager",
 	"/api-playground": "API Playground",
 	"/regex": "Regex Playground",
