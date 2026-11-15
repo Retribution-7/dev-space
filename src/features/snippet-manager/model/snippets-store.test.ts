@@ -41,6 +41,7 @@ function makeDraft(overrides: Partial<SnippetDraft> = {}): SnippetDraft {
 		description: "Delays updates.",
 		code: "const value = 1;",
 		language: "TypeScript",
+		category: "General",
 		tags: ["react"],
 		...overrides,
 	};
@@ -242,5 +243,42 @@ describe("snippets store", () => {
 		});
 
 		expect(store.getState().snippets[0].isFavorite).toBe(true);
+	});
+
+	it("creates snippets in the default category", () => {
+		const { store } = createTestStore();
+		const created = store.getState().createSnippet(makeDraft());
+
+		expect(created.category).toBe("General");
+	});
+
+	it("creates snippets in a selected category", () => {
+		const { store } = createTestStore();
+		const created = store
+			.getState()
+			.createSnippet(makeDraft({ category: "API" }));
+
+		expect(created.category).toBe("API");
+	});
+
+	it("changes the category of a saved snippet", () => {
+		const { store } = createTestStore();
+		const created = store.getState().createSnippet(makeDraft());
+		const updated = store
+			.getState()
+			.updateSnippet(created.id, makeDraft({ category: "Testing" }));
+
+		expect(updated.category).toBe("Testing");
+		expect(updated.id).toBe(created.id);
+		expect(store.getState().snippets[0].category).toBe("Testing");
+	});
+
+	it("persists the category together with the snippet", () => {
+		const { store, data } = createTestStore();
+
+		store.getState().createSnippet(makeDraft({ category: "DevOps" }));
+
+		const stored = JSON.parse(data.get(SNIPPETS_STORAGE_KEY) ?? "null");
+		expect(stored.state.snippets[0].category).toBe("DevOps");
 	});
 });

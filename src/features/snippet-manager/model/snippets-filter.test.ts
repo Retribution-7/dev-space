@@ -22,6 +22,7 @@ function makeSnippet(overrides: Partial<Snippet> = {}): Snippet {
 		description: "Delays updates until typing stops.",
 		code: "const value = useDebounce(input, 300);",
 		language: "TypeScript",
+		category: "General",
 		tags: ["react", "hooks"],
 		isFavorite: false,
 		createdAt: "2026-01-01T09:00:00.000Z",
@@ -175,6 +176,56 @@ describe("filterSnippets by tags", () => {
 		expect(
 			filterSnippets(allSnippets, makeFilter({ tags: ["REACT"] }), NOW),
 		).toHaveLength(1);
+	});
+});
+
+describe("filterSnippets by category", () => {
+	const apiSnippet = makeSnippet({
+		id: "api",
+		category: "API",
+		isFavorite: true,
+	});
+	const testingSnippet = makeSnippet({
+		id: "testing",
+		category: "Testing",
+	});
+
+	it("keeps only snippets of the selected category", () => {
+		expect(
+			filterSnippets(
+				[apiSnippet, testingSnippet],
+				makeFilter({ category: "API" }),
+				NOW,
+			).map((snippet) => snippet.id),
+		).toEqual(["api"]);
+	});
+
+	it("searches by category", () => {
+		expect(
+			filterSnippets(
+				[apiSnippet, testingSnippet],
+				makeFilter({ query: "testing" }),
+				NOW,
+			).map((snippet) => snippet.id),
+		).toEqual(["testing"]);
+	});
+
+	it("works together with the other filters", () => {
+		expect(
+			filterSnippets(
+				[apiSnippet, testingSnippet],
+				makeFilter({ category: "API", query: "debounce", favoritesOnly: true }),
+				NOW,
+			).map((snippet) => snippet.id),
+		).toEqual(["api"]);
+
+		expect(
+			filterSnippets(
+				[apiSnippet, testingSnippet],
+				makeFilter({ category: "Testing", favoritesOnly: true }),
+				NOW,
+			),
+		).toEqual([]);
 	});
 });
 
@@ -423,6 +474,7 @@ describe("countActiveFilters and isFilterActive", () => {
 		expect(countActiveFilters(makeFilter({ language: "Python" }))).toBe(1);
 		expect(countActiveFilters(makeFilter({ tags: ["react", "json"] }))).toBe(1);
 		expect(countActiveFilters(makeFilter({ favoritesOnly: true }))).toBe(1);
+		expect(countActiveFilters(makeFilter({ category: "API" }))).toBe(1);
 		expect(
 			countActiveFilters(
 				makeFilter({ dateRange: { type: "last-days", days: 7 } }),

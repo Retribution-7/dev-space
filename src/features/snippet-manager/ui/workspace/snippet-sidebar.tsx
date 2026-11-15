@@ -187,8 +187,10 @@ export function SnippetSidebar({
 												<span className="block truncate text-sm font-medium">
 													{snippet.title}
 												</span>
-												<span className="text-muted-foreground block truncate font-mono text-xs">
-													{snippet.language}
+												<span className="text-muted-foreground block truncate text-xs">
+													<span className="font-mono">{snippet.language}</span>
+													{" · "}
+													{snippet.category}
 												</span>
 											</span>
 										</button>

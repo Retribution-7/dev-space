@@ -5,6 +5,7 @@ import {
 	normalizeStoredSnippets,
 	parseSnippetsPersistedState,
 } from "./snippets-persistence";
+import type { Snippet } from "./types";
 
 const validSnippet = {
 	id: "snippet-1",
@@ -25,11 +26,28 @@ describe("normalizeStoredSnippet", () => {
 			description: "Delays updates.",
 			code: "const value = 1;",
 			language: "TypeScript",
+			category: "General",
 			tags: ["react", "hooks"],
 			isFavorite: false,
 			createdAt: "2026-01-01T09:00:00.000Z",
 			updatedAt: "2026-01-02T09:00:00.000Z",
 		});
+	});
+
+	it("keeps a known stored category", () => {
+		expect(
+			normalizeStoredSnippet({ ...validSnippet, category: "DevOps" })?.category,
+		).toBe("DevOps");
+	});
+
+	it("defaults snippets saved before categories existed to General", () => {
+		expect(normalizeStoredSnippet(validSnippet)?.category).toBe("General");
+	});
+
+	it("does not store unknown categories", () => {
+		expect(
+			normalizeStoredSnippet({ ...validSnippet, category: "Legacy" })?.category,
+		).toBe("General");
 	});
 
 	it("keeps the favorite flag of stored snippets", () => {
@@ -59,6 +77,7 @@ describe("normalizeStoredSnippet", () => {
 			description: "",
 			code: "code",
 			language: "Text",
+			category: "General",
 			tags: [],
 			isFavorite: false,
 			createdAt: "1970-01-01T00:00:00.000Z",
@@ -105,12 +124,13 @@ describe("normalizeStoredSnippets", () => {
 	});
 });
 
-const expectedSnippet = {
+const expectedSnippet: Snippet = {
 	id: "snippet-1",
 	title: "Debounce hook",
 	description: "Delays updates.",
 	code: "const value = 1;",
 	language: "TypeScript",
+	category: "General",
 	tags: ["react", "hooks"],
 	isFavorite: false,
 	createdAt: "2026-01-01T09:00:00.000Z",

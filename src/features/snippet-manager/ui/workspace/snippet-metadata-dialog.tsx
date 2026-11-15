@@ -14,13 +14,21 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
-	DEFAULT_SNIPPET_LANGUAGE,
-	parseTagsInput,
-} from "../../model/snippet-draft";
+	normalizeSnippetCategory,
+	SNIPPET_CATEGORIES,
+	type SnippetCategory,
+} from "../../model/snippet-categories";
+import { DEFAULT_SNIPPET_LANGUAGE } from "../../model/snippet-draft";
 import { getLanguageOptions } from "../../model/snippet-languages";
 import {
 	type SnippetDraftErrors,
@@ -29,6 +37,7 @@ import {
 import type { SnippetDraft } from "../../model/types";
 import { ConfirmDialog } from "../confirm-dialog";
 import { FormField } from "../form-field";
+import { TagInput } from "../tag-input";
 
 type SnippetMetadataDialogProps = {
 	open: boolean;
@@ -37,6 +46,13 @@ type SnippetMetadataDialogProps = {
 	onOpenChange: (open: boolean) => void;
 	onSubmit: (draft: SnippetDraft) => void;
 };
+
+function isSameTags(first: string[], second: string[]): boolean {
+	return (
+		first.length === second.length &&
+		first.every((tag, index) => tag === second[index])
+	);
+}
 
 export function SnippetMetadataDialog({
 	open,
@@ -49,14 +65,18 @@ export function SnippetMetadataDialog({
 		title: draft.title,
 		description: draft.description,
 		language: draft.language.trim() || DEFAULT_SNIPPET_LANGUAGE,
-		tagsInput: draft.tags.join(", "),
+		category: draft.category,
+		tags: [...draft.tags],
 	}));
 	const [title, setTitle] = React.useState(initialValues.title);
 	const [description, setDescription] = React.useState(
 		initialValues.description,
 	);
 	const [language, setLanguage] = React.useState(initialValues.language);
-	const [tagsInput, setTagsInput] = React.useState(initialValues.tagsInput);
+	const [category, setCategory] = React.useState<SnippetCategory>(
+		initialValues.category,
+	);
+	const [tags, setTags] = React.useState<string[]>(initialValues.tags);
 	const [errors, setErrors] = React.useState<SnippetDraftErrors>({});
 	const [submitError, setSubmitError] = React.useState<string | null>(null);
 	const [discardOpen, setDiscardOpen] = React.useState(false);
@@ -66,7 +86,8 @@ export function SnippetMetadataDialog({
 		title !== initialValues.title ||
 		description !== initialValues.description ||
 		language !== initialValues.language ||
-		tagsInput !== initialValues.tagsInput;
+		category !== initialValues.category ||
+		!isSameTags(tags, initialValues.tags);
 
 	function clearError(field: keyof SnippetDraftErrors) {
 		setErrors((current) => {
@@ -88,7 +109,8 @@ export function SnippetMetadataDialog({
 			description,
 			code: draft.code,
 			language,
-			tags: parseTagsInput(tagsInput),
+			category,
+			tags,
 		};
 		const nextErrors = validateSnippetDraft(nextDraft);
 
@@ -150,7 +172,7 @@ export function SnippetMetadataDialog({
 	return (
 		<>
 			<Dialog open={open} onOpenChange={handleOpenChange}>
-				<DialogContent>
+				<DialogContent className="sm:max-w-md">
 					<DialogHeader>
 						<DialogTitle>
 							{mode === "create" ? "Save snippet" : "Edit snippet details"}
@@ -210,36 +232,81 @@ export function SnippetMetadataDialog({
 							/>
 						</FormField>
 
-						<FormField
-							id="snippet-language"
-							label="Language"
-							hint="Used for syntax highlighting in the editor."
-						>
-							<Select
+						<div className="grid grid-cols-2 items-start gap-3">
+							<FormField
 								id="snippet-language"
-								value={language}
-								onChange={(event) => setLanguage(event.target.value)}
-								aria-describedby="snippet-language-hint"
+								label="Language"
+								hint="Used for syntax highlighting."
 							>
-								{getLanguageOptions(language).map((option) => (
-									<option key={option} value={option}>
-										{option}
-									</option>
-								))}
-							</Select>
-						</FormField>
+								<Select
+									value={language}
+									items={getLanguageOptions(language).map((option) => ({
+										value: option,
+										label: option,
+									}))}
+									onValueChange={(value) =>
+										setLanguage(value ?? DEFAULT_SNIPPET_LANGUAGE)
+									}
+								>
+									<SelectTrigger
+										id="snippet-language"
+										type="button"
+										size="sm"
+										className="w-full text-xs"
+										aria-describedby="snippet-language-hint"
+									>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{getLanguageOptions(language).map((option) => (
+											<SelectItem key={option} value={option}>
+												{option}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</FormField>
+
+							<FormField id="snippet-category" label="Category">
+								<Select
+									value={category}
+									items={SNIPPET_CATEGORIES.map((option) => ({
+										value: option,
+										label: option,
+									}))}
+									onValueChange={(value) =>
+										setCategory(normalizeSnippetCategory(value))
+									}
+								>
+									<SelectTrigger
+										id="snippet-category"
+										type="button"
+										size="sm"
+										className="w-full text-xs"
+									>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{SNIPPET_CATEGORIES.map((option) => (
+											<SelectItem key={option} value={option}>
+												{option}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</FormField>
+						</div>
 
 						<FormField
 							id="snippet-tags"
 							label="Tags"
-							hint="Separate tags with commas."
+							hint="Press Enter or space to add a tag. Suggestions come from the recommended catalog."
 						>
-							<Input
+							<TagInput
 								id="snippet-tags"
-								value={tagsInput}
-								onChange={(event) => setTagsInput(event.target.value)}
-								placeholder="e.g. React, hooks, UI"
-								aria-describedby="snippet-tags-hint"
+								tags={tags}
+								onChange={setTags}
+								ariaDescribedBy="snippet-tags-hint"
 							/>
 						</FormField>
 

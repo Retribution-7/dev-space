@@ -16,6 +16,7 @@ function makeDraft(overrides: Partial<SnippetDraft> = {}): SnippetDraft {
 		description: "Delays updates until the user stops typing.",
 		code: "const debounced = useDebounce(value, 300);",
 		language: "TypeScript",
+		category: "General",
 		tags: ["react", "hooks"],
 		...overrides,
 	};

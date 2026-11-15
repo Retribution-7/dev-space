@@ -77,6 +77,7 @@ describe("createSnippetsStorage", () => {
 						description: "",
 						code: "const value = 1;",
 						language: "TypeScript",
+						category: "General",
 						tags: ["react"],
 						isFavorite: false,
 						createdAt: "2026-01-01T09:00:00.000Z",

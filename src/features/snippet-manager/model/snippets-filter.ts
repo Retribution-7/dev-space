@@ -1,3 +1,4 @@
+import type { SnippetCategory } from "./snippet-categories";
 import type { Snippet } from "./types";
 
 export type SnippetsDateRange =
@@ -7,6 +8,7 @@ export type SnippetsDateRange =
 
 export type SnippetsFilterState = {
 	query: string;
+	category: SnippetCategory | null;
 	language: string | null;
 	tags: string[];
 	favoritesOnly: boolean;
@@ -17,6 +19,7 @@ export const ALL_TIME_DATE_RANGE: SnippetsDateRange = { type: "all" };
 
 export const EMPTY_SNIPPETS_FILTER: SnippetsFilterState = {
 	query: "",
+	category: null,
 	language: null,
 	tags: [],
 	favoritesOnly: false,
@@ -67,7 +70,21 @@ function matchesQuery(snippet: Snippet, query: string): boolean {
 		snippet.description.toLowerCase().includes(query) ||
 		snippet.code.toLowerCase().includes(query) ||
 		snippet.language.toLowerCase().includes(query) ||
+		snippet.category.toLowerCase().includes(query) ||
 		snippet.tags.some((tag) => tag.toLowerCase().includes(query))
+	);
+}
+
+function matchesCategory(
+	snippet: Snippet,
+	category: SnippetCategory | null,
+): boolean {
+	if (category === null) {
+		return true;
+	}
+
+	return (
+		snippet.category.trim().toLowerCase() === category.trim().toLowerCase()
 	);
 }
 
@@ -130,6 +147,7 @@ export function filterSnippets(
 	return snippets.filter(
 		(snippet) =>
 			matchesQuery(snippet, query) &&
+			matchesCategory(snippet, filter.category) &&
 			matchesLanguage(snippet, filter.language) &&
 			matchesTags(snippet, filter.tags) &&
 			matchesFavorite(snippet, filter.favoritesOnly) &&
@@ -166,6 +184,10 @@ export function getAvailableTags(snippets: Snippet[]): string[] {
 /** Number of active filter groups: language, tags, and date range. */
 export function countActiveFilters(filter: SnippetsFilterState): number {
 	let count = 0;
+
+	if (filter.category !== null) {
+		count += 1;
+	}
 
 	if (filter.language !== null) {
 		count += 1;

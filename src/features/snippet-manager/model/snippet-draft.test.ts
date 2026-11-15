@@ -6,7 +6,7 @@ import {
 	normalizeTags,
 	parseTagsInput,
 } from "./snippet-draft";
-import type { Snippet } from "./types";
+import type { Snippet, SnippetDraft } from "./types";
 
 const snippet: Snippet = {
 	id: "snippet-1",
@@ -14,6 +14,7 @@ const snippet: Snippet = {
 	description: "Delays updates until the user stops typing.",
 	code: "const debounced = useDebounce(value, 300);",
 	language: "TypeScript",
+	category: "Utilities",
 	tags: ["react", "hooks"],
 	isFavorite: false,
 	createdAt: "2026-01-01T09:00:00.000Z",
@@ -27,6 +28,7 @@ describe("createSnippetDraft", () => {
 			description: "",
 			code: "",
 			language: "",
+			category: "General",
 			tags: [],
 		});
 	});
@@ -37,6 +39,7 @@ describe("createSnippetDraft", () => {
 			description: snippet.description,
 			code: snippet.code,
 			language: snippet.language,
+			category: snippet.category,
 			tags: ["react", "hooks"],
 		});
 	});
@@ -55,6 +58,13 @@ describe("normalizeTags", () => {
 		expect(
 			normalizeTags([" react ", "", "react", "hooks", "  ", "hooks"]),
 		).toEqual(["react", "hooks"]);
+	});
+
+	it("removes duplicates ignoring case and keeps the first spelling", () => {
+		expect(normalizeTags(["React", "react", "REACT", "hooks"])).toEqual([
+			"React",
+			"hooks",
+		]);
 	});
 });
 
@@ -80,6 +90,7 @@ describe("normalizeSnippetDraft", () => {
 				description: "  Delays updates.  ",
 				code: "\nconst value = 1;\n",
 				language: "   ",
+				category: "API",
 				tags: [" react ", "", "react", "hooks"],
 			}),
 		).toEqual({
@@ -87,6 +98,7 @@ describe("normalizeSnippetDraft", () => {
 			description: "Delays updates.",
 			code: "\nconst value = 1;\n",
 			language: "Text",
+			category: "API",
 			tags: ["react", "hooks"],
 		});
 	});
@@ -98,8 +110,33 @@ describe("normalizeSnippetDraft", () => {
 				description: "",
 				code: "code",
 				language: "  TypeScript  ",
+				category: "General",
 				tags: [],
 			}).language,
 		).toBe("TypeScript");
+	});
+
+	it("keeps a known category and defaults an unknown one", () => {
+		expect(
+			normalizeSnippetDraft({
+				title: "Title",
+				description: "",
+				code: "code",
+				language: "Text",
+				category: "Testing",
+				tags: [],
+			}).category,
+		).toBe("Testing");
+
+		expect(
+			normalizeSnippetDraft({
+				title: "Title",
+				description: "",
+				code: "code",
+				language: "Text",
+				category: "Unknown" as SnippetDraft["category"],
+				tags: [],
+			}).category,
+		).toBe("General");
 	});
 });

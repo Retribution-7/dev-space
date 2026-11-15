@@ -18,7 +18,7 @@ export function FormField({
 	children,
 }: FormFieldProps) {
 	return (
-		<div className="grid gap-1.5">
+		<div className="grid content-start gap-1.5">
 			<label htmlFor={id} className="text-sm font-medium">
 				{label}
 				{required ? (

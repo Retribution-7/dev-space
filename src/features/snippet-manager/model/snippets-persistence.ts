@@ -1,3 +1,4 @@
+import { normalizeSnippetCategory } from "./snippet-categories";
 import { DEFAULT_SNIPPET_LANGUAGE, normalizeTags } from "./snippet-draft";
 import type { Snippet } from "./types";
 
@@ -56,6 +57,9 @@ export function normalizeStoredSnippet(value: unknown): Snippet | null {
 			typeof value.language === "string" && value.language.trim() !== ""
 				? value.language.trim()
 				: DEFAULT_SNIPPET_LANGUAGE,
+		// Snippets saved before categories existed have no category and stay
+		// in the default one; unknown categories are not stored as they are.
+		category: normalizeSnippetCategory(value.category),
 		tags: normalizeTags(
 			Array.isArray(value.tags)
 				? value.tags.filter((tag): tag is string => typeof tag === "string")

@@ -9,6 +9,7 @@ function makeDraft(overrides: Partial<SnippetDraft> = {}): SnippetDraft {
 		description: "",
 		code: "const value = 1;",
 		language: "TypeScript",
+		category: "General",
 		tags: [],
 		...overrides,
 	};

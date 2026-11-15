@@ -11,6 +11,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -19,9 +20,19 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Select } from "@/components/ui/select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/shared/lib/utils";
 
+import {
+	normalizeSnippetCategory,
+	SNIPPET_CATEGORIES,
+} from "../../model/snippet-categories";
 import {
 	ALL_TIME_DATE_RANGE,
 	countActiveFilters,
@@ -36,8 +47,10 @@ import {
 	type SnippetsSortOption,
 } from "../../model/snippets-sort";
 
-const ALL_LANGUAGES_VALUE = "";
+const ALL_LANGUAGES_VALUE = "__all__";
 const ALL_LANGUAGES_LABEL = "All Languages";
+const ALL_CATEGORIES_VALUE = "__all__";
+const ALL_CATEGORIES_LABEL = "All Categories";
 
 const DATE_RANGE_PRESETS: { label: string; days: number | null }[] = [
 	{ label: "All Time", days: null },
@@ -75,19 +88,14 @@ function ToggleChip({
 	children: React.ReactNode;
 }) {
 	return (
-		<button
-			type="button"
-			aria-pressed={selected}
-			onClick={onClick}
-			className={cn(
-				"rounded-md border px-2 py-0.5 text-xs transition-colors",
-				selected
-					? "border-primary/40 bg-primary/10 text-primary"
-					: "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
-			)}
+		<Badge
+			variant={selected ? "default" : "secondary"}
+			render={
+				<button type="button" aria-pressed={selected} onClick={onClick} />
+			}
 		>
 			{children}
-		</button>
+		</Badge>
 	);
 }
 
@@ -122,6 +130,25 @@ export function SnippetFilterBar({
 		filter.dateRange.type === "custom"
 			? { from: filter.dateRange.from, to: filter.dateRange.to }
 			: pendingRange;
+
+	const languageItems = [
+		{ value: ALL_LANGUAGES_VALUE, label: ALL_LANGUAGES_LABEL },
+		...availableLanguages.map((language) => ({
+			value: language,
+			label: language,
+		})),
+	];
+	const categoryItems = [
+		{ value: ALL_CATEGORIES_VALUE, label: ALL_CATEGORIES_LABEL },
+		...SNIPPET_CATEGORIES.map((category) => ({
+			value: category,
+			label: category,
+		})),
+	];
+	const sortItems = SNIPPET_SORT_OPTIONS.map((option) => ({
+		value: option.value,
+		label: option.label,
+	}));
 
 	function toggleTag(tag: string) {
 		const isSelected = filter.tags.some(
@@ -201,42 +228,90 @@ export function SnippetFilterBar({
 
 			<Select
 				value={sort}
-				onChange={(event) =>
-					onSortChange(event.target.value as SnippetsSortOption)
-				}
-				aria-label="Sort snippets"
-				className="h-7 px-2 text-xs md:text-xs"
+				items={sortItems}
+				onValueChange={(value) => {
+					if (value) {
+						onSortChange(value);
+					}
+				}}
 			>
-				{SNIPPET_SORT_OPTIONS.map((option) => (
-					<option key={option.value} value={option.value}>
-						{option.label}
-					</option>
-				))}
+				<SelectTrigger
+					type="button"
+					size="sm"
+					className="w-full text-xs"
+					aria-label="Sort snippets"
+				>
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					{sortItems.map((item) => (
+						<SelectItem key={item.value} value={item.value}>
+							{item.label}
+						</SelectItem>
+					))}
+				</SelectContent>
 			</Select>
 
 			<div className="grid grid-cols-2 gap-1.5">
 				<Select
 					value={filter.language ?? ALL_LANGUAGES_VALUE}
-					onChange={(event) =>
+					items={languageItems}
+					onValueChange={(value) =>
 						onFilterChange({
 							...filter,
-							language:
-								event.target.value === ALL_LANGUAGES_VALUE
-									? null
-									: event.target.value,
+							language: value === ALL_LANGUAGES_VALUE ? null : value,
 						})
 					}
-					aria-label="Filter by language"
-					className="h-7 px-2 text-xs md:text-xs"
 				>
-					<option value={ALL_LANGUAGES_VALUE}>{ALL_LANGUAGES_LABEL}</option>
-					{availableLanguages.map((language) => (
-						<option key={language} value={language}>
-							{language}
-						</option>
-					))}
+					<SelectTrigger
+						type="button"
+						size="sm"
+						className="w-full text-xs"
+						aria-label="Filter by language"
+					>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{languageItems.map((item) => (
+							<SelectItem key={item.value} value={item.value}>
+								{item.label}
+							</SelectItem>
+						))}
+					</SelectContent>
 				</Select>
 
+				<Select
+					value={filter.category ?? ALL_CATEGORIES_VALUE}
+					items={categoryItems}
+					onValueChange={(value) =>
+						onFilterChange({
+							...filter,
+							category:
+								value && value !== ALL_CATEGORIES_VALUE
+									? normalizeSnippetCategory(value)
+									: null,
+						})
+					}
+				>
+					<SelectTrigger
+						type="button"
+						size="sm"
+						className="w-full text-xs"
+						aria-label="Filter by category"
+					>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{categoryItems.map((item) => (
+							<SelectItem key={item.value} value={item.value}>
+								{item.label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+
+			<div className="grid grid-cols-2 gap-1.5">
 				<Popover
 					onOpenChange={(open) => {
 						if (!open) {
@@ -290,9 +365,7 @@ export function SnippetFilterBar({
 						/>
 					</PopoverContent>
 				</Popover>
-			</div>
 
-			<div className="flex items-center gap-1.5">
 				<Popover>
 					<PopoverTrigger
 						render={
@@ -300,7 +373,7 @@ export function SnippetFilterBar({
 								type="button"
 								variant="outline"
 								size="sm"
-								className="min-w-0 flex-1"
+								className="w-full min-w-0"
 							/>
 						}
 					>
@@ -354,33 +427,34 @@ export function SnippetFilterBar({
 						) : null}
 					</PopoverContent>
 				</Popover>
-
-				<Button
-					type="button"
-					variant={filter.favoritesOnly ? "default" : "outline"}
-					size="sm"
-					aria-pressed={filter.favoritesOnly}
-					title={
-						filter.favoritesOnly
-							? "Show all snippets"
-							: "Show favorite snippets only"
-					}
-					onClick={() =>
-						onFilterChange({
-							...filter,
-							favoritesOnly: !filter.favoritesOnly,
-						})
-					}
-				>
-					<HugeiconsIcon
-						icon={StarIcon}
-						className={cn("size-3.5", filter.favoritesOnly && "fill-current")}
-						data-icon="inline-start"
-						aria-hidden="true"
-					/>
-					Favorites
-				</Button>
 			</div>
+
+			<Button
+				type="button"
+				variant={filter.favoritesOnly ? "default" : "outline"}
+				size="sm"
+				aria-pressed={filter.favoritesOnly}
+				title={
+					filter.favoritesOnly
+						? "Show all snippets"
+						: "Show favorite snippets only"
+				}
+				className="w-full"
+				onClick={() =>
+					onFilterChange({
+						...filter,
+						favoritesOnly: !filter.favoritesOnly,
+					})
+				}
+			>
+				<HugeiconsIcon
+					icon={StarIcon}
+					className={cn("size-3.5", filter.favoritesOnly && "fill-current")}
+					data-icon="inline-start"
+					aria-hidden="true"
+				/>
+				Favorites
+			</Button>
 
 			<div className="flex items-center justify-between gap-2">
 				<p className="text-muted-foreground text-xs">
