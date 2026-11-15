@@ -1,3 +1,7 @@
 export type { Snippet, SnippetDraft } from "./model/types";
-export { SnippetList } from "./ui/snippet-list";
-export { SnippetManager } from "./ui/snippet-manager";
+export {
+	useRecentSnippets,
+	useSnippets,
+	useSnippetsHydration,
+} from "./model/use-snippets";
+export { SnippetWorkspace } from "./ui/workspace/snippet-workspace";

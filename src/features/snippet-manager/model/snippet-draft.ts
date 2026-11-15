@@ -1,5 +1,7 @@
 import type { Snippet, SnippetDraft } from "./types";
 
+export const DEFAULT_SNIPPET_LANGUAGE = "Text";
+
 export function createSnippetDraft(snippet?: Snippet | null): SnippetDraft {
 	if (!snippet) {
 		return {
@@ -43,7 +45,7 @@ export function normalizeSnippetDraft(draft: SnippetDraft): SnippetDraft {
 		title: draft.title.trim(),
 		description: draft.description.trim(),
 		code: draft.code,
-		language: draft.language.trim() || "Text",
+		language: draft.language.trim() || DEFAULT_SNIPPET_LANGUAGE,
 		tags: normalizeTags(draft.tags),
 	};
 }

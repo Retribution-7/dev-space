@@ -1,41 +1,44 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import {
-	createSnippet as createSnippetRecord,
-	removeSnippet,
-	updateSnippet as updateSnippetRecord,
-} from "./snippet-operations";
-import type { Snippet, SnippetDraft } from "./types";
+	RECENT_SNIPPETS_LIMIT,
+	selectRecentSnippets,
+} from "./snippets-selectors";
+import { useSnippetsStore } from "./snippets-store";
+import type { Snippet } from "./types";
 
+/**
+ * Reads the shared snippets collection and its CRUD actions.
+ */
 export function useSnippets() {
-	const [snippets, setSnippets] = useState<Snippet[]>([]);
-
-	const createSnippet = useCallback((draft: SnippetDraft) => {
-		const snippet = createSnippetRecord(draft, {
-			id: crypto.randomUUID(),
-			timestamp: new Date().toISOString(),
-		});
-
-		setSnippets((current) => [snippet, ...current]);
-	}, []);
-
-	const updateSnippet = useCallback((id: string, draft: SnippetDraft) => {
-		const timestamp = new Date().toISOString();
-
-		setSnippets((current) =>
-			current.map((snippet) =>
-				snippet.id === id
-					? updateSnippetRecord(snippet, draft, timestamp)
-					: snippet,
-			),
-		);
-	}, []);
-
-	const deleteSnippet = useCallback((id: string) => {
-		setSnippets((current) => removeSnippet(current, id));
-	}, []);
+	const snippets = useSnippetsStore((state) => state.snippets);
+	const createSnippet = useSnippetsStore((state) => state.createSnippet);
+	const updateSnippet = useSnippetsStore((state) => state.updateSnippet);
+	const deleteSnippet = useSnippetsStore((state) => state.deleteSnippet);
 
 	return { snippets, createSnippet, updateSnippet, deleteSnippet };
+}
+
+/**
+ * Returns `true` once persisted snippets are loaded.
+ *
+ * The server snapshot is always `false`, so SSR and the hydration render
+ * produce identical markup and never flash the empty state.
+ */
+export function useSnippetsHydration(): boolean {
+	return useSyncExternalStore(
+		useSnippetsStore.subscribe,
+		() => useSnippetsStore.getState().hasHydrated,
+		() => false,
+	);
+}
+
+export function useRecentSnippets(
+	limit: number = RECENT_SNIPPETS_LIMIT,
+): Snippet[] {
+	const snippets = useSnippetsStore((state) => state.snippets);
+
+	return selectRecentSnippets(snippets, limit);
 }

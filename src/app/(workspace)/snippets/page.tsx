@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { FavoriteToolButton } from "@/features/favorites";
-import { SnippetManager } from "@/features/snippet-manager";
+import { SnippetWorkspace } from "@/features/snippet-manager";
 
 export const metadata: Metadata = {
 	title: "Snippet Manager",
@@ -20,7 +20,7 @@ export default function SnippetsPage() {
 				<FavoriteToolButton toolId="snippet-manager" />
 			</div>
 
-			<SnippetManager />
+			<SnippetWorkspace />
 		</div>
 	);
 }
