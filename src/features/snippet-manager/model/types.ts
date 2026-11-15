@@ -8,3 +8,8 @@ export type Snippet = {
 	createdAt: string;
 	updatedAt: string;
 };
+
+export type SnippetDraft = Pick<
+	Snippet,
+	"title" | "description" | "code" | "language" | "tags"
+>;

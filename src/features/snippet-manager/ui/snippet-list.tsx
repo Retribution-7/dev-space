@@ -1,6 +1,11 @@
-import { FileCodeIcon } from "@hugeicons/core-free-icons";
+import {
+	Delete02Icon,
+	Edit02Icon,
+	FileCodeIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/shared/lib/utils";
 
@@ -9,6 +14,14 @@ import type { Snippet } from "../model/types";
 type SnippetListProps = {
 	snippets: Snippet[];
 	className?: string;
+	onEdit?: (snippet: Snippet) => void;
+	onDelete?: (snippet: Snippet) => void;
+};
+
+type SnippetListItemProps = {
+	snippet: Snippet;
+	onEdit?: (snippet: Snippet) => void;
+	onDelete?: (snippet: Snippet) => void;
 };
 
 const updatedAtFormatter = new Intl.DateTimeFormat("en", {
@@ -21,7 +34,12 @@ const updatedAtFormatter = new Intl.DateTimeFormat("en", {
 const TAG_CLASS_NAME =
 	"bg-muted/60 text-muted-foreground inline-flex max-w-full items-center rounded-md border px-2 py-0.5 text-[0.7rem] font-medium break-all";
 
-export function SnippetList({ snippets, className }: SnippetListProps) {
+export function SnippetList({
+	snippets,
+	className,
+	onEdit,
+	onDelete,
+}: SnippetListProps) {
 	if (snippets.length === 0) {
 		return (
 			<Card className={cn("gap-0 py-0 shadow-xs", className)}>
@@ -49,7 +67,12 @@ export function SnippetList({ snippets, className }: SnippetListProps) {
 			<CardContent className="p-0">
 				<ul className="divide-y">
 					{snippets.map((snippet) => (
-						<SnippetListItem key={snippet.id} snippet={snippet} />
+						<SnippetListItem
+							key={snippet.id}
+							snippet={snippet}
+							onEdit={onEdit}
+							onDelete={onDelete}
+						/>
 					))}
 				</ul>
 			</CardContent>
@@ -57,7 +80,9 @@ export function SnippetList({ snippets, className }: SnippetListProps) {
 	);
 }
 
-function SnippetListItem({ snippet }: { snippet: Snippet }) {
+function SnippetListItem({ snippet, onEdit, onDelete }: SnippetListItemProps) {
+	const hasActions = onEdit !== undefined || onDelete !== undefined;
+
 	return (
 		<li className="flex items-start gap-3 px-4 py-4 sm:px-5">
 			<span className="bg-muted text-muted-foreground mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg">
@@ -69,20 +94,62 @@ function SnippetListItem({ snippet }: { snippet: Snippet }) {
 			</span>
 
 			<div className="min-w-0 flex-1">
-				<div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+				<div className="flex items-start justify-between gap-3">
 					<h3
-						className="line-clamp-2 min-w-0 text-sm font-medium break-words"
+						className="line-clamp-2 min-w-0 flex-1 text-sm font-medium break-words"
 						title={snippet.title}
 					>
 						{snippet.title}
 					</h3>
-					<time
-						dateTime={snippet.updatedAt}
-						title={snippet.updatedAt}
-						className="text-muted-foreground shrink-0 text-xs whitespace-nowrap"
-					>
-						Updated {formatUpdatedAt(snippet.updatedAt)}
-					</time>
+
+					<div className="flex shrink-0 flex-col items-end gap-1">
+						<time
+							dateTime={snippet.updatedAt}
+							title={snippet.updatedAt}
+							className="text-muted-foreground text-xs whitespace-nowrap"
+						>
+							Updated {formatUpdatedAt(snippet.updatedAt)}
+						</time>
+
+						{hasActions ? (
+							<div className="-mr-1.5 flex items-center gap-0.5">
+								{onEdit ? (
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon-sm"
+										className="text-muted-foreground hover:text-foreground"
+										title="Edit snippet"
+										aria-label={`Edit ${snippet.title}`}
+										onClick={() => onEdit(snippet)}
+									>
+										<HugeiconsIcon
+											icon={Edit02Icon}
+											className="size-3.5"
+											aria-hidden="true"
+										/>
+									</Button>
+								) : null}
+								{onDelete ? (
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon-sm"
+										className="text-muted-foreground hover:text-destructive"
+										title="Delete snippet"
+										aria-label={`Delete ${snippet.title}`}
+										onClick={() => onDelete(snippet)}
+									>
+										<HugeiconsIcon
+											icon={Delete02Icon}
+											className="size-3.5"
+											aria-hidden="true"
+										/>
+									</Button>
+								) : null}
+							</div>
+						) : null}
+					</div>
 				</div>
 
 				{snippet.description ? (
