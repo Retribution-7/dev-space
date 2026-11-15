@@ -12,6 +12,7 @@ type FileUploadButtonProps = {
 	onFileLoad: (content: string, fileName: string) => void;
 	onError?: (message: string) => void;
 	label?: string;
+	loadingLabel?: string;
 	ariaLabel?: string;
 	variant?: React.ComponentProps<typeof Button>["variant"];
 	size?: React.ComponentProps<typeof Button>["size"];
@@ -22,6 +23,7 @@ export function FileUploadButton({
 	onFileLoad,
 	onError,
 	label = "Upload",
+	loadingLabel = "Reading",
 	ariaLabel = "Upload a JSON file",
 	variant = "outline",
 	size = "sm",
@@ -29,6 +31,7 @@ export function FileUploadButton({
 }: FileUploadButtonProps) {
 	const inputRef = React.useRef<HTMLInputElement>(null);
 	const operationIdRef = React.useRef(0);
+	const [isReading, setIsReading] = React.useState(false);
 
 	const handleButtonClick = React.useCallback(() => {
 		const input = inputRef.current;
@@ -49,6 +52,7 @@ export function FileUploadButton({
 
 			operationIdRef.current = operationId;
 			input.value = "";
+			setIsReading(false);
 
 			if (!file) {
 				return;
@@ -58,6 +62,8 @@ export function FileUploadButton({
 				onError?.(INVALID_FILE_MESSAGE);
 				return;
 			}
+
+			setIsReading(true);
 
 			try {
 				const content = await file.text();
@@ -73,6 +79,10 @@ export function FileUploadButton({
 				}
 
 				onError?.(`Could not read "${file.name}". Please try again.`);
+			} finally {
+				if (operationId === operationIdRef.current) {
+					setIsReading(false);
+				}
 			}
 		},
 		[onError, onFileLoad],
@@ -87,7 +97,11 @@ export function FileUploadButton({
 				className="sr-only"
 				tabIndex={-1}
 				aria-hidden="true"
-				onChange={(event) => void handleFileChange(event)}
+				onChange={(event) => {
+					void handleFileChange(event).catch(() => {
+						onError?.("Could not read the selected file. Please try again.");
+					});
+				}}
 			/>
 			<Button
 				type="button"
@@ -96,6 +110,8 @@ export function FileUploadButton({
 				className={className}
 				aria-label={ariaLabel}
 				title={ariaLabel}
+				disabled={isReading}
+				aria-busy={isReading || undefined}
 				onClick={handleButtonClick}
 			>
 				<HugeiconsIcon
@@ -104,7 +120,7 @@ export function FileUploadButton({
 					data-icon="inline-start"
 					aria-hidden="true"
 				/>
-				{label}
+				{isReading ? loadingLabel : label}
 			</Button>
 		</>
 	);

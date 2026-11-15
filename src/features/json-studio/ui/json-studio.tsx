@@ -30,7 +30,7 @@ import { formatJson } from "../model/format-json";
 import { minifyJson } from "../model/minify-json";
 import { type JsonParseResult, parseJson } from "../model/parse-json";
 import type { JsonTransformResult } from "../model/transform-json";
-import { validateJson } from "../model/validate-json";
+import { validateJson, type ValidateJsonResult } from "../model/validate-json";
 
 import { JsonTreeView } from "./json-tree-view";
 
@@ -46,6 +46,12 @@ type JsonCheckFailure =
 type ViewMode = "code" | "tree";
 
 const EMPTY_EDITOR_MESSAGE = "The editor is empty. Add some JSON first.";
+const EMPTY_DOWNLOAD_MESSAGE = "The editor is empty. Nothing to download.";
+const EDITOR_UNAVAILABLE_MESSAGE = "The editor is not ready. Please try again.";
+const TRANSFORM_ERROR_MESSAGE = "Could not process the JSON. Please try again.";
+const VALIDATE_ERROR_MESSAGE = "Could not validate the JSON. Please try again.";
+const UPLOAD_ERROR_MESSAGE =
+	"Could not load the file into the editor. Please try again.";
 const VALIDATE_SUCCESS_MESSAGE = "JSON is valid.";
 
 export function JsonStudio({ initialValue }: JsonStudioProps) {
@@ -58,36 +64,65 @@ export function JsonStudio({ initialValue }: JsonStudioProps) {
 	const [treeSnapshot, setTreeSnapshot] =
 		React.useState<JsonParseResult | null>(null);
 
-	const applyFailure = React.useCallback((result: JsonCheckFailure) => {
-		if (result.status === "empty") {
-			setErrorMessage(EMPTY_EDITOR_MESSAGE);
-		} else {
-			setErrorMessage(`Invalid JSON: ${result.message}`);
-		}
-
+	const showError = React.useCallback((message: string) => {
+		setErrorMessage(message);
 		setSuccessMessage(null);
 	}, []);
+
+	const showSuccess = React.useCallback((message: string) => {
+		setSuccessMessage(message);
+		setErrorMessage(null);
+	}, []);
+
+	const clearFeedback = React.useCallback(() => {
+		setErrorMessage(null);
+		setSuccessMessage(null);
+	}, []);
+
+	const applyFailure = React.useCallback(
+		(result: JsonCheckFailure) => {
+			showError(
+				result.status === "empty"
+					? EMPTY_EDITOR_MESSAGE
+					: `Invalid JSON: ${result.message}`,
+			);
+		},
+		[showError],
+	);
 
 	const applyTransform = React.useCallback(
 		(transform: JsonTransform) => {
 			const editor = editorRef.current;
 
 			if (!editor) {
+				showError(EDITOR_UNAVAILABLE_MESSAGE);
 				return;
 			}
 
-			const result = transform(editor.getValue());
+			let result: JsonTransformResult;
+
+			try {
+				result = transform(editor.getValue());
+			} catch {
+				showError(TRANSFORM_ERROR_MESSAGE);
+				return;
+			}
 
 			if (result.status !== "success") {
 				applyFailure(result);
 				return;
 			}
 
-			setErrorMessage(null);
-			setSuccessMessage(null);
-			editor.setValue(result.value);
+			try {
+				editor.setValue(result.value);
+			} catch {
+				showError(TRANSFORM_ERROR_MESSAGE);
+				return;
+			}
+
+			clearFeedback();
 		},
-		[applyFailure],
+		[applyFailure, clearFeedback, showError],
 	);
 
 	const handleFormat = React.useCallback(() => {
@@ -102,67 +137,82 @@ export function JsonStudio({ initialValue }: JsonStudioProps) {
 		const editor = editorRef.current;
 
 		if (!editor) {
+			showError(EDITOR_UNAVAILABLE_MESSAGE);
 			return;
 		}
 
-		const result = validateJson(editor.getValue());
+		let result: ValidateJsonResult;
+
+		try {
+			result = validateJson(editor.getValue());
+		} catch {
+			showError(VALIDATE_ERROR_MESSAGE);
+			return;
+		}
 
 		if (result.status !== "valid") {
 			applyFailure(result);
 			return;
 		}
 
-		setErrorMessage(null);
-		setSuccessMessage(VALIDATE_SUCCESS_MESSAGE);
-	}, [applyFailure]);
+		showSuccess(VALIDATE_SUCCESS_MESSAGE);
+	}, [applyFailure, showError, showSuccess]);
 
-	const handleViewModeChange = React.useCallback((mode: ViewMode) => {
-		setViewMode(mode);
-		setErrorMessage(null);
-		setSuccessMessage(null);
+	const handleViewModeChange = React.useCallback(
+		(mode: ViewMode) => {
+			setViewMode(mode);
+			clearFeedback();
 
-		if (mode === "tree") {
-			setTreeSnapshot(parseJson(editorRef.current?.getValue() ?? ""));
-		}
-	}, []);
+			if (mode === "tree") {
+				setTreeSnapshot(parseJson(editorRef.current?.getValue() ?? ""));
+			}
+		},
+		[clearFeedback],
+	);
 
 	const handleEditorChange = React.useCallback(() => {
-		setErrorMessage(null);
-		setSuccessMessage(null);
+		clearFeedback();
 
 		if (viewMode === "tree") {
 			setTreeSnapshot(parseJson(editorRef.current?.getValue() ?? ""));
 		}
-	}, [viewMode]);
+	}, [clearFeedback, viewMode]);
 
 	const handleUpload = React.useCallback(
 		(content: string, fileName: string) => {
 			const editor = editorRef.current;
 
 			if (!editor) {
+				showError(UPLOAD_ERROR_MESSAGE);
 				return;
 			}
 
-			editor.setValue(content);
-			setErrorMessage(null);
-			setSuccessMessage(`Loaded "${fileName}".`);
+			try {
+				editor.setValue(content);
 
-			if (viewMode === "tree") {
-				setTreeSnapshot(parseJson(content));
+				if (viewMode === "tree") {
+					setTreeSnapshot(parseJson(content));
+				}
+			} catch {
+				showError(UPLOAD_ERROR_MESSAGE);
+				return;
 			}
+
+			showSuccess(`Loaded "${fileName}".`);
 		},
-		[viewMode],
+		[showError, showSuccess, viewMode],
 	);
 
-	const handleFileError = React.useCallback((message: string) => {
-		setSuccessMessage(null);
-		setErrorMessage(message);
-	}, []);
+	const handleDownloadSuccess = React.useCallback(
+		(fileName: string) => {
+			showSuccess(`Downloaded "${fileName}".`);
+		},
+		[showSuccess],
+	);
 
-	const handleDownloadSuccess = React.useCallback((fileName: string) => {
-		setErrorMessage(null);
-		setSuccessMessage(`Downloaded "${fileName}".`);
-	}, []);
+	const handleDownloadEmpty = React.useCallback(() => {
+		showError(EMPTY_DOWNLOAD_MESSAGE);
+	}, [showError]);
 
 	return (
 		<Card className="gap-0 py-0 shadow-xs">
@@ -186,14 +236,15 @@ export function JsonStudio({ initialValue }: JsonStudioProps) {
 					</span>
 					<FileUploadButton
 						onFileLoad={handleUpload}
-						onError={handleFileError}
+						onError={showError}
 						ariaLabel="Upload a JSON file into the editor"
 					/>
 					<DownloadButton
 						getValue={() => editorRef.current?.getValue() ?? ""}
 						fileName="data.json"
 						onSuccess={handleDownloadSuccess}
-						onError={handleFileError}
+						onError={showError}
+						onEmpty={handleDownloadEmpty}
 						ariaLabel="Download JSON editor contents as data.json"
 					/>
 					<Button

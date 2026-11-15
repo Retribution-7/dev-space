@@ -38,12 +38,17 @@ type CompareStudioProps = {
 	initialModified?: string;
 };
 
-type CompareFileFeedback = {
+type CompareFeedback = {
 	status: "success" | "error";
 	message: string;
 };
 
 const EMPTY_EDITOR_MESSAGE = "The editor is empty. Add some JSON first.";
+const EMPTY_DOWNLOAD_MESSAGE = "The editor is empty. Nothing to download.";
+const COMPARE_ERROR_MESSAGE =
+	"Could not compare the documents. Please try again.";
+const UPLOAD_ERROR_MESSAGE =
+	"Could not load the file into the editor. Please try again.";
 
 const DOCUMENT_LABELS: Record<CompareDocument, string> = {
 	original: "Original JSON",
@@ -60,13 +65,12 @@ export function CompareStudio({
 	const [differences, setDifferences] = React.useState<JsonDifference[] | null>(
 		null,
 	);
-	const [fileFeedback, setFileFeedback] =
-		React.useState<CompareFileFeedback | null>(null);
+	const [feedback, setFeedback] = React.useState<CompareFeedback | null>(null);
 
 	const resetComparison = React.useCallback(() => {
 		setIssues([]);
 		setDifferences(null);
-		setFileFeedback(null);
+		setFeedback(null);
 	}, []);
 
 	const handleOriginalChange = React.useCallback(() => {
@@ -81,13 +85,27 @@ export function CompareStudio({
 		(content: string, fileName: string) => {
 			const editor = originalEditorRef.current;
 
+			resetComparison();
+
 			if (!editor) {
+				setFeedback({
+					status: "error",
+					message: `Original JSON: ${UPLOAD_ERROR_MESSAGE}`,
+				});
 				return;
 			}
 
-			editor.setValue(content);
-			resetComparison();
-			setFileFeedback({
+			try {
+				editor.setValue(content);
+			} catch {
+				setFeedback({
+					status: "error",
+					message: `Original JSON: ${UPLOAD_ERROR_MESSAGE}`,
+				});
+				return;
+			}
+
+			setFeedback({
 				status: "success",
 				message: `Loaded "${fileName}" into Original JSON.`,
 			});
@@ -99,13 +117,27 @@ export function CompareStudio({
 		(content: string, fileName: string) => {
 			const editor = modifiedEditorRef.current;
 
+			resetComparison();
+
 			if (!editor) {
+				setFeedback({
+					status: "error",
+					message: `Modified JSON: ${UPLOAD_ERROR_MESSAGE}`,
+				});
 				return;
 			}
 
-			editor.setValue(content);
-			resetComparison();
-			setFileFeedback({
+			try {
+				editor.setValue(content);
+			} catch {
+				setFeedback({
+					status: "error",
+					message: `Modified JSON: ${UPLOAD_ERROR_MESSAGE}`,
+				});
+				return;
+			}
+
+			setFeedback({
 				status: "success",
 				message: `Loaded "${fileName}" into Modified JSON.`,
 			});
@@ -114,42 +146,71 @@ export function CompareStudio({
 	);
 
 	const handleOriginalUploadError = React.useCallback((message: string) => {
-		setFileFeedback({ status: "error", message: `Original JSON: ${message}` });
+		setFeedback({ status: "error", message: `Original JSON: ${message}` });
 	}, []);
 
 	const handleModifiedUploadError = React.useCallback((message: string) => {
-		setFileFeedback({ status: "error", message: `Modified JSON: ${message}` });
+		setFeedback({ status: "error", message: `Modified JSON: ${message}` });
 	}, []);
 
 	const handleDownloadSuccess = React.useCallback((fileName: string) => {
-		setFileFeedback({
+		setFeedback({
 			status: "success",
 			message: `Downloaded "${fileName}".`,
 		});
 	}, []);
 
 	const handleDownloadError = React.useCallback((message: string) => {
-		setFileFeedback({ status: "error", message });
+		setFeedback({ status: "error", message });
+	}, []);
+
+	const handleOriginalDownloadEmpty = React.useCallback(() => {
+		setFeedback({
+			status: "error",
+			message: `Original JSON: ${EMPTY_DOWNLOAD_MESSAGE}`,
+		});
+	}, []);
+
+	const handleModifiedDownloadEmpty = React.useCallback(() => {
+		setFeedback({
+			status: "error",
+			message: `Modified JSON: ${EMPTY_DOWNLOAD_MESSAGE}`,
+		});
 	}, []);
 
 	const handleCompare = React.useCallback(() => {
-		const originalValue =
-			originalEditorRef.current?.getValue() ?? initialOriginal;
-		const modifiedValue =
-			modifiedEditorRef.current?.getValue() ?? initialModified;
-		const result = compareJson(originalValue, modifiedValue);
+		try {
+			const originalEditor = originalEditorRef.current;
+			const modifiedEditor = modifiedEditorRef.current;
 
-		setFileFeedback(null);
+			if (!originalEditor || !modifiedEditor) {
+				setIssues([]);
+				setDifferences(null);
+				setFeedback({ status: "error", message: COMPARE_ERROR_MESSAGE });
+				return;
+			}
 
-		if (result.status === "error") {
-			setIssues(result.issues);
+			const result = compareJson(
+				originalEditor.getValue(),
+				modifiedEditor.getValue(),
+			);
+
+			setFeedback(null);
+
+			if (result.status === "error") {
+				setIssues(result.issues);
+				setDifferences(null);
+				return;
+			}
+
+			setIssues([]);
+			setDifferences(result.differences);
+		} catch {
+			setIssues([]);
 			setDifferences(null);
-			return;
+			setFeedback({ status: "error", message: COMPARE_ERROR_MESSAGE });
 		}
-
-		setIssues([]);
-		setDifferences(result.differences);
-	}, [initialModified, initialOriginal]);
+	}, []);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -183,31 +244,31 @@ export function CompareStudio({
 						Compare
 					</Button>
 				</CardHeader>
-				{fileFeedback ? (
+				{feedback ? (
 					<div
-						role={fileFeedback.status === "error" ? "alert" : "status"}
+						role={feedback.status === "error" ? "alert" : "status"}
 						className={cn(
 							"flex items-start gap-2 border-b px-4 py-2.5 text-sm",
-							fileFeedback.status === "error"
+							feedback.status === "error"
 								? "border-destructive/20 bg-destructive/5"
 								: "border-emerald-500/20 bg-emerald-500/5",
 						)}
 					>
 						<HugeiconsIcon
 							icon={
-								fileFeedback.status === "error"
+								feedback.status === "error"
 									? AlertCircleIcon
 									: CheckmarkCircleIcon
 							}
 							className={cn(
 								"mt-0.5 size-4 shrink-0",
-								fileFeedback.status === "error"
+								feedback.status === "error"
 									? "text-destructive"
 									: "text-emerald-600 dark:text-emerald-400",
 							)}
 							aria-hidden="true"
 						/>
-						<p className="min-w-0">{fileFeedback.message}</p>
+						<p className="min-w-0">{feedback.message}</p>
 					</div>
 				) : null}
 				{issues.length > 0 ? (
@@ -246,6 +307,7 @@ export function CompareStudio({
 							onUploadError={handleOriginalUploadError}
 							onDownloadSuccess={handleDownloadSuccess}
 							onDownloadError={handleDownloadError}
+							onDownloadEmpty={handleOriginalDownloadEmpty}
 							initialValue={initialOriginal}
 							onChange={handleOriginalChange}
 						/>
@@ -261,6 +323,7 @@ export function CompareStudio({
 							onUploadError={handleModifiedUploadError}
 							onDownloadSuccess={handleDownloadSuccess}
 							onDownloadError={handleDownloadError}
+							onDownloadEmpty={handleModifiedDownloadEmpty}
 							initialValue={initialModified}
 							onChange={handleModifiedChange}
 						/>
@@ -288,6 +351,7 @@ function EditorPanel({
 	onUploadError,
 	onDownloadSuccess,
 	onDownloadError,
+	onDownloadEmpty,
 	initialValue,
 	onChange,
 }: {
@@ -302,6 +366,7 @@ function EditorPanel({
 	onUploadError: (message: string) => void;
 	onDownloadSuccess: (fileName: string) => void;
 	onDownloadError: (message: string) => void;
+	onDownloadEmpty: () => void;
 	initialValue: string;
 	onChange: () => void;
 }) {
@@ -336,6 +401,7 @@ function EditorPanel({
 						fileName={downloadFileName}
 						onSuccess={onDownloadSuccess}
 						onError={onDownloadError}
+						onEmpty={onDownloadEmpty}
 						ariaLabel={`Download ${title} as ${downloadFileName}`}
 						variant="outline"
 						size="xs"

@@ -13,6 +13,7 @@ type DownloadButtonProps = {
 	fileName: string;
 	onSuccess?: (fileName: string) => void;
 	onError?: (message: string) => void;
+	onEmpty?: () => void;
 	label?: string;
 	ariaLabel?: string;
 	variant?: React.ComponentProps<typeof Button>["variant"];
@@ -25,6 +26,7 @@ export function DownloadButton({
 	fileName,
 	onSuccess,
 	onError,
+	onEmpty,
 	label = "Download",
 	ariaLabel,
 	variant = "outline",
@@ -38,6 +40,12 @@ export function DownloadButton({
 
 		try {
 			const value = getValue();
+
+			if (value.trim().length === 0) {
+				onEmpty?.();
+				return;
+			}
+
 			const blob = new Blob([value], { type: DOWNLOAD_MIME_TYPE });
 
 			objectUrl = URL.createObjectURL(blob);
@@ -61,7 +69,7 @@ export function DownloadButton({
 		if (isDownloaded) {
 			onSuccess?.(fileName);
 		}
-	}, [fileName, getValue, onError, onSuccess]);
+	}, [fileName, getValue, onEmpty, onError, onSuccess]);
 
 	const buttonAriaLabel = ariaLabel ?? `Download ${fileName}`;
 

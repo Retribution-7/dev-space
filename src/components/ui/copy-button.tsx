@@ -20,6 +20,7 @@ type CopyButtonProps = {
 	copiedLabel?: string;
 	errorLabel?: string;
 	emptyLabel?: string;
+	copyingLabel?: string;
 	ariaLabel?: string;
 	variant?: React.ComponentProps<typeof Button>["variant"];
 	size?: React.ComponentProps<typeof Button>["size"];
@@ -62,12 +63,14 @@ export function CopyButton({
 	copiedLabel = "Copied",
 	errorLabel = "Copy failed",
 	emptyLabel = "Nothing to copy",
+	copyingLabel = "Copying",
 	ariaLabel,
 	variant = "outline",
 	size = "sm",
 	className,
 }: CopyButtonProps) {
 	const [status, setStatus] = React.useState<CopyStatus>("idle");
+	const [isCopying, setIsCopying] = React.useState(false);
 	const resetTimerRef = React.useRef<number | null>(null);
 	const operationIdRef = React.useRef(0);
 
@@ -92,6 +95,9 @@ export function CopyButton({
 		const operationId = operationIdRef.current + 1;
 		operationIdRef.current = operationId;
 
+		clearResetTimer();
+		setIsCopying(false);
+
 		let value: string;
 
 		try {
@@ -107,6 +113,8 @@ export function CopyButton({
 			scheduleReset();
 			return;
 		}
+
+		setIsCopying(true);
 
 		try {
 			const clipboard = navigator.clipboard;
@@ -128,12 +136,13 @@ export function CopyButton({
 			}
 
 			setStatus("error");
+		} finally {
+			if (operationId === operationIdRef.current) {
+				setIsCopying(false);
+				scheduleReset();
+			}
 		}
-
-		if (operationId === operationIdRef.current) {
-			scheduleReset();
-		}
-	}, [getValue, scheduleReset]);
+	}, [clearResetTimer, getValue, scheduleReset]);
 
 	const statusLabels: Record<CopyStatus, string> = {
 		idle: label,
@@ -141,9 +150,13 @@ export function CopyButton({
 		error: errorLabel,
 		empty: emptyLabel,
 	};
-	const statusStyle = COPY_STATUS_STYLES[status];
-	const statusLabel = statusLabels[status];
-	const liveMessage = COPY_LIVE_MESSAGES[status];
+	const statusStyle = isCopying
+		? COPY_STATUS_STYLES.idle
+		: COPY_STATUS_STYLES[status];
+	const statusLabel = isCopying ? copyingLabel : statusLabels[status];
+	const liveMessage = isCopying
+		? "Copying to clipboard."
+		: COPY_LIVE_MESSAGES[status];
 
 	return (
 		<>
@@ -154,6 +167,8 @@ export function CopyButton({
 				className={className}
 				aria-label={ariaLabel}
 				title={ariaLabel}
+				disabled={isCopying}
+				aria-busy={isCopying || undefined}
 				onClick={() => void handleCopy()}
 			>
 				<HugeiconsIcon
