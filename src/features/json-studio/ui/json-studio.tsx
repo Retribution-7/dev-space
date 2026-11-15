@@ -21,6 +21,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy-button";
 import { JsonEditor, type JsonEditorHandle } from "@/components/ui/json-editor";
 
 import { formatJson } from "../model/format-json";
@@ -194,6 +195,12 @@ export function JsonStudio({ initialValue }: JsonStudioProps) {
 						/>
 						Validate
 					</Button>
+					<CopyButton
+						getValue={() => editorRef.current?.getValue() ?? ""}
+						ariaLabel="Copy JSON editor contents"
+						variant="outline"
+						size="sm"
+					/>
 				</div>
 			</CardHeader>
 			{errorMessage ? (

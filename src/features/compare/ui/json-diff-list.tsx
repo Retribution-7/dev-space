@@ -8,6 +8,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/shared/lib/utils";
 
 import type { JsonDifference, JsonDifferenceType } from "../model/types";
@@ -91,21 +92,30 @@ export function JsonDiffList({ differences, className }: JsonDiffListProps) {
 						{summary} Values are compared by property path and array index.
 					</CardDescription>
 				</div>
-				<div className="flex flex-wrap items-center gap-1.5">
-					{DIFFERENCE_TYPES.map((type) =>
-						counts[type] > 0 ? (
-							<span
-								key={type}
-								className={cn(
-									"inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[0.7rem] font-medium",
-									DIFFERENCE_STYLES[type].badgeClassName,
-								)}
-							>
-								{DIFFERENCE_STYLES[type].label}
-								<span className="font-mono tabular-nums">{counts[type]}</span>
-							</span>
-						) : null,
-					)}
+				<div className="flex flex-wrap items-center gap-2">
+					<div className="flex flex-wrap items-center gap-1.5">
+						{DIFFERENCE_TYPES.map((type) =>
+							counts[type] > 0 ? (
+								<span
+									key={type}
+									className={cn(
+										"inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[0.7rem] font-medium",
+										DIFFERENCE_STYLES[type].badgeClassName,
+									)}
+								>
+									{DIFFERENCE_STYLES[type].label}
+									<span className="font-mono tabular-nums">{counts[type]}</span>
+								</span>
+							) : null,
+						)}
+					</div>
+					<CopyButton
+						getValue={() => JSON.stringify(differences, null, 2)}
+						label="Copy All"
+						ariaLabel="Copy all differences as JSON"
+						variant="outline"
+						size="sm"
+					/>
 				</div>
 			</CardHeader>
 			<CardContent className="p-0">
@@ -139,6 +149,13 @@ function DifferenceItem({ difference }: { difference: JsonDifference }) {
 				<code className="bg-muted/60 text-foreground max-w-full rounded-md border px-1.5 py-0.5 font-mono text-[0.75rem] break-all">
 					{difference.path}
 				</code>
+				<CopyButton
+					getValue={() => JSON.stringify(difference, null, 2)}
+					ariaLabel={`Copy difference at ${difference.path}`}
+					variant="outline"
+					size="xs"
+					className="ml-auto"
+				/>
 			</div>
 			<div
 				className={cn(

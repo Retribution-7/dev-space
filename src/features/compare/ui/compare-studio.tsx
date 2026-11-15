@@ -17,6 +17,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy-button";
 import { JsonEditor, type JsonEditorHandle } from "@/components/ui/json-editor";
 
 import { compareJson } from "../model/compare-json";
@@ -143,6 +144,7 @@ export function CompareStudio({
 							description="Source document"
 							ariaLabel="Original JSON editor"
 							editorRef={originalEditorRef}
+							getCopyValue={() => originalEditorRef.current?.getValue() ?? ""}
 							initialValue={initialOriginal}
 							onChange={handleOriginalChange}
 						/>
@@ -152,6 +154,7 @@ export function CompareStudio({
 							description="Changed document"
 							ariaLabel="Modified JSON editor"
 							editorRef={modifiedEditorRef}
+							getCopyValue={() => modifiedEditorRef.current?.getValue() ?? ""}
 							initialValue={initialModified}
 							onChange={handleModifiedChange}
 						/>
@@ -173,6 +176,7 @@ function EditorPanel({
 	description,
 	ariaLabel,
 	editorRef,
+	getCopyValue,
 	initialValue,
 	onChange,
 }: {
@@ -181,6 +185,7 @@ function EditorPanel({
 	description: string;
 	ariaLabel: string;
 	editorRef: React.Ref<JsonEditorHandle>;
+	getCopyValue: () => string;
 	initialValue: string;
 	onChange: () => void;
 }) {
@@ -199,9 +204,17 @@ function EditorPanel({
 						{title}
 					</h3>
 				</div>
-				<span className="text-muted-foreground hidden text-[0.7rem] sm:inline">
-					{description}
-				</span>
+				<div className="flex shrink-0 items-center gap-2">
+					<span className="text-muted-foreground hidden text-[0.7rem] sm:inline">
+						{description}
+					</span>
+					<CopyButton
+						getValue={getCopyValue}
+						ariaLabel={`Copy ${title} contents`}
+						variant="outline"
+						size="xs"
+					/>
+				</div>
 			</div>
 			<div className="h-[clamp(18rem,45svh,28rem)] lg:h-[clamp(20rem,52svh,34rem)]">
 				<JsonEditor
