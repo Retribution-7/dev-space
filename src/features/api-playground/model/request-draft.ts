@@ -33,6 +33,17 @@ export function getFilledRowCount(rows: KeyValueRow[]): number {
 	return toKeyValueEntries(rows).length;
 }
 
+export function cloneRequestDraft(draft: RequestDraft): RequestDraft {
+	return {
+		method: draft.method,
+		url: draft.url,
+		params: draft.params.map((row) => ({ ...row })),
+		headers: draft.headers.map((row) => ({ ...row })),
+		bodyType: draft.bodyType,
+		body: draft.body,
+	};
+}
+
 export type RequestDraftAction =
 	| { type: "set-method"; method: HttpMethod }
 	| { type: "set-url"; url: string }
@@ -46,7 +57,8 @@ export type RequestDraftAction =
 	  }
 	| { type: "remove-row"; section: KeyValueSection; id: string }
 	| { type: "set-body-type"; bodyType: RequestBodyType }
-	| { type: "set-body"; body: string };
+	| { type: "set-body"; body: string }
+	| { type: "restore-draft"; draft: RequestDraft };
 
 export function requestDraftReducer(
 	state: RequestDraft,
@@ -91,5 +103,7 @@ export function requestDraftReducer(
 			return { ...state, bodyType: action.bodyType };
 		case "set-body":
 			return { ...state, body: action.body };
+		case "restore-draft":
+			return cloneRequestDraft(action.draft);
 	}
 }

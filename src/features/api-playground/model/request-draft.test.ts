@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import {
+	cloneRequestDraft,
 	createRequestDraft,
 	getFilledRowCount,
 	requestDraftReducer,
@@ -508,5 +509,49 @@ describe("getFilledRowCount", () => {
 				{ id: "4", key: "limit", value: "10" },
 			]),
 		).toBe(2);
+	});
+});
+
+describe("cloneRequestDraft", () => {
+	it("copies the draft and its rows without sharing references", () => {
+		const draft = createPopulatedDraft();
+		const clone = cloneRequestDraft(draft);
+
+		expect(clone).toEqual(draft);
+		expect(clone.params[0]).not.toBe(draft.params[0]);
+		expect(clone.headers[0]).not.toBe(draft.headers[0]);
+
+		clone.params[0].value = "999";
+		clone.body = "changed";
+
+		expect(draft.params[0].value).toBe("2");
+		expect(draft.body).toBe('{"name":"DevSpace"}');
+	});
+});
+
+describe("requestDraftReducer restore-draft", () => {
+	it("restores the full request configuration from a draft", () => {
+		const restored = createPopulatedDraft();
+		const state = requestDraftReducer(createRequestDraft(), {
+			type: "restore-draft",
+			draft: restored,
+		});
+
+		expect(state).toEqual(restored);
+	});
+
+	it("does not share row references with the restored draft", () => {
+		const restored = createPopulatedDraft();
+		const state = requestDraftReducer(createRequestDraft(), {
+			type: "restore-draft",
+			draft: restored,
+		});
+
+		expect(state.params[0]).not.toBe(restored.params[0]);
+		expect(state.headers[0]).not.toBe(restored.headers[0]);
+
+		state.params[0].value = "changed";
+
+		expect(restored.params[0].value).toBe("2");
 	});
 });

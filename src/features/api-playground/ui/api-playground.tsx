@@ -30,6 +30,8 @@ import {
 	describeRequestExecution,
 	type RequestFeedback,
 } from "../model/request-feedback";
+import { createRequestHistoryEntry } from "../model/request-history";
+import { useRequestHistoryStore } from "../model/request-history-store";
 import {
 	createRequestSendState,
 	requestSendReducer,
@@ -38,9 +40,12 @@ import { DEFAULT_REQUEST_TIMEOUT_MS } from "../model/request-timeout";
 import type {
 	KeyValueField,
 	KeyValueSection,
+	RequestDraft,
 	RequestExecution,
 } from "../model/types";
 
+import { CollectionsPanel } from "./collections-panel";
+import { HistoryPanel } from "./history-panel";
 import { KeyValueEditor } from "./key-value-editor";
 import { RequestBar } from "./request-bar";
 import { RequestBodyEditor } from "./request-body-editor";
@@ -60,8 +65,10 @@ export function ApiPlayground() {
 	);
 	const { isSending, execution: lastExecution, validationIssue } = sendState;
 	const [timeoutMs, setTimeoutMs] = React.useState(DEFAULT_REQUEST_TIMEOUT_MS);
+	const addHistoryEntry = useRequestHistoryStore((state) => state.addEntry);
 	const abortRef = React.useRef<AbortController | null>(null);
 	const requestIdRef = React.useRef(0);
+	const recordedHistoryRequestIdRef = React.useRef(0);
 	const isSendingRef = React.useRef(false);
 	const isMountedRef = React.useRef(true);
 
@@ -125,6 +132,7 @@ export function ApiPlayground() {
 
 		const requestId = requestIdRef.current + 1;
 		const controller = new AbortController();
+		const startedAt = performance.now();
 
 		requestIdRef.current = requestId;
 		abortRef.current = controller;
@@ -151,12 +159,27 @@ export function ApiPlayground() {
 			}
 
 			dispatchSend({ type: "settled", execution });
+
+			if (recordedHistoryRequestIdRef.current !== requestId) {
+				recordedHistoryRequestIdRef.current = requestId;
+				addHistoryEntry(
+					createRequestHistoryEntry(draft, execution, {
+						id: crypto.randomUUID(),
+						executedAt: new Date().toISOString(),
+						durationMs: performance.now() - startedAt,
+					}),
+				);
+			}
 		} finally {
 			if (requestId === requestIdRef.current) {
 				isSendingRef.current = false;
 				abortRef.current = null;
 			}
 		}
+	}
+
+	function handleRestore(draftToRestore: RequestDraft) {
+		updateDraft({ type: "restore-draft", draft: draftToRestore });
 	}
 
 	function handleCancel() {
@@ -271,6 +294,10 @@ export function ApiPlayground() {
 			</Card>
 
 			<ResponsePanel execution={lastExecution} isSending={isSending} />
+
+			<HistoryPanel onRestore={handleRestore} />
+
+			<CollectionsPanel draft={draft} onRestore={handleRestore} />
 		</div>
 	);
 }
