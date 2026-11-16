@@ -2,7 +2,6 @@
 
 import {
 	ApiIcon,
-	InformationCircleIcon,
 	Link01Icon,
 	Settings02Icon,
 } from "@hugeicons/core-free-icons";
@@ -18,20 +17,32 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import { executeRequest } from "../api/send-request";
+import { prepareRequest } from "../model/request-config";
 import {
 	createRequestDraft,
 	getFilledRowCount,
 	type RequestDraftAction,
 	requestDraftReducer,
 } from "../model/request-draft";
-import type { KeyValueField, KeyValueSection } from "../model/types";
+import {
+	describeRequestExecution,
+	type RequestFeedback,
+} from "../model/request-feedback";
+import {
+	createRequestSendState,
+	requestSendReducer,
+} from "../model/request-send-state";
+import type {
+	KeyValueField,
+	KeyValueSection,
+	RequestExecution,
+} from "../model/types";
 
 import { KeyValueEditor } from "./key-value-editor";
 import { RequestBar } from "./request-bar";
 import { RequestBodyEditor } from "./request-body-editor";
-
-const SEND_NOT_AVAILABLE_MESSAGE =
-	"Request sending will be available in the next step.";
+import { RequestFeedbackBanner } from "./request-feedback";
 
 export function ApiPlayground() {
 	const [draft, dispatch] = React.useReducer(
@@ -39,13 +50,38 @@ export function ApiPlayground() {
 		undefined,
 		createRequestDraft,
 	);
-	const [notice, setNotice] = React.useState<string | null>(null);
+	const [sendState, dispatchSend] = React.useReducer(
+		requestSendReducer,
+		undefined,
+		createRequestSendState,
+	);
+	const { isSending, execution: lastExecution, validationIssue } = sendState;
+	const abortRef = React.useRef<AbortController | null>(null);
+	const requestIdRef = React.useRef(0);
+	const isSendingRef = React.useRef(false);
+	const isMountedRef = React.useRef(true);
+
+	React.useEffect(() => {
+		isMountedRef.current = true;
+
+		return () => {
+			isMountedRef.current = false;
+			abortRef.current?.abort();
+		};
+	}, []);
 
 	const paramsCount = getFilledRowCount(draft.params);
 	const headersCount = getFilledRowCount(draft.headers);
+	const feedback: RequestFeedback | null = isSending
+		? null
+		: validationIssue
+			? { tone: "error", message: validationIssue.message }
+			: lastExecution
+				? describeRequestExecution(lastExecution)
+				: null;
 
 	function updateDraft(action: RequestDraftAction) {
-		setNotice(null);
+		dispatchSend({ type: "clear-validation" });
 		dispatch(action);
 	}
 
@@ -66,8 +102,58 @@ export function ApiPlayground() {
 		updateDraft({ type: "remove-row", section, id });
 	}
 
-	function handleSend() {
-		setNotice(SEND_NOT_AVAILABLE_MESSAGE);
+	async function handleSend() {
+		if (isSendingRef.current) {
+			return;
+		}
+
+		const preparation = prepareRequest(draft);
+
+		if (!preparation.ok) {
+			dispatchSend({
+				type: "validation-failed",
+				issue: preparation.issue,
+			});
+			return;
+		}
+
+		const requestId = requestIdRef.current + 1;
+		const controller = new AbortController();
+
+		requestIdRef.current = requestId;
+		abortRef.current = controller;
+		isSendingRef.current = true;
+		dispatchSend({ type: "start" });
+
+		try {
+			let execution: RequestExecution;
+
+			try {
+				execution = await executeRequest(preparation.request, {
+					signal: controller.signal,
+				});
+			} catch (error) {
+				execution = {
+					status: "unexpected-error",
+					message: getUnexpectedMessage(error),
+				};
+			}
+
+			if (requestId !== requestIdRef.current || !isMountedRef.current) {
+				return;
+			}
+
+			dispatchSend({ type: "settled", execution });
+		} finally {
+			if (requestId === requestIdRef.current) {
+				isSendingRef.current = false;
+				abortRef.current = null;
+			}
+		}
+	}
+
+	function handleCancel() {
+		abortRef.current?.abort();
 	}
 
 	return (
@@ -89,26 +175,16 @@ export function ApiPlayground() {
 					<RequestBar
 						method={draft.method}
 						url={draft.url}
+						isSending={isSending}
 						onMethodChange={(method) =>
 							updateDraft({ type: "set-method", method })
 						}
 						onUrlChange={(url) => updateDraft({ type: "set-url", url })}
-						onSubmit={handleSend}
+						onSubmit={() => void handleSend()}
+						onCancel={handleCancel}
 					/>
 
-					{notice ? (
-						<div
-							role="status"
-							className="bg-muted/40 flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
-						>
-							<HugeiconsIcon
-								icon={InformationCircleIcon}
-								className="text-muted-foreground mt-0.5 size-4 shrink-0"
-								aria-hidden="true"
-							/>
-							<p className="min-w-0">{notice}</p>
-						</div>
-					) : null}
+					{feedback ? <RequestFeedbackBanner feedback={feedback} /> : null}
 				</div>
 
 				<Tabs defaultValue="params" className="gap-0">
@@ -187,4 +263,12 @@ function TabCount({ count }: { count: number }) {
 			({count})
 		</span>
 	);
+}
+
+function getUnexpectedMessage(error: unknown): string {
+	if (error instanceof Error && error.message) {
+		return `Something went wrong while sending the request: ${error.message}`;
+	}
+
+	return "Something went wrong while sending the request.";
 }
