@@ -29,6 +29,7 @@
 		"@hugeicons/core-free-icons": "^4.4.0",
 		"@hugeicons/react": "^1.1.10",
 		"@lezer/highlight": "^1.2.5",
+		"axios": "^1.21.1",
 		"class-variance-authority": "^0.7.1",
 		"cmdk": "^1.1.1",
 		"cn": "^0.5.2",

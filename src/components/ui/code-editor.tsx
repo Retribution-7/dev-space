@@ -50,6 +50,7 @@ type CodeEditorProps = {
 	language?: string;
 	ariaLabel?: string;
 	className?: string;
+	readOnly?: boolean;
 	onChange?: (value: string) => void;
 	ref?: React.Ref<CodeEditorHandle>;
 };
@@ -212,6 +213,12 @@ export function createLanguageExtension(language: string): Extension {
 	}
 }
 
+function createReadOnlyExtension(readOnly: boolean): Extension {
+	return readOnly
+		? [EditorState.readOnly.of(true), EditorView.editable.of(false)]
+		: [];
+}
+
 function replaceDocument(
 	view: EditorView | null,
 	nextValue: string,
@@ -239,6 +246,7 @@ export function CodeEditor({
 	language = "",
 	ariaLabel = "Code editor",
 	className,
+	readOnly = false,
 	onChange,
 	ref,
 }: CodeEditorProps) {
@@ -247,8 +255,10 @@ export function CodeEditor({
 	const valueRef = React.useRef(value);
 	const languageRef = React.useRef(language);
 	const ariaLabelRef = React.useRef(ariaLabel);
+	const readOnlyRef = React.useRef(readOnly);
 	const languageCompartmentRef = React.useRef(new Compartment());
 	const historyCompartmentRef = React.useRef(new Compartment());
+	const readOnlyCompartmentRef = React.useRef(new Compartment());
 	const onChangeRef = React.useRef(onChange);
 
 	React.useEffect(() => {
@@ -291,6 +301,9 @@ export function CodeEditor({
 				indentUnit.of("  "),
 				languageCompartmentRef.current.of(
 					createLanguageExtension(languageRef.current),
+				),
+				readOnlyCompartmentRef.current.of(
+					createReadOnlyExtension(readOnlyRef.current),
 				),
 				syntaxHighlighting(codeHighlightStyle),
 				editorTheme,
@@ -347,6 +360,22 @@ export function CodeEditor({
 			),
 		});
 	}, [language]);
+
+	React.useEffect(() => {
+		readOnlyRef.current = readOnly;
+
+		const view = viewRef.current;
+
+		if (!view) {
+			return;
+		}
+
+		view.dispatch({
+			effects: readOnlyCompartmentRef.current.reconfigure(
+				createReadOnlyExtension(readOnly),
+			),
+		});
+	}, [readOnly]);
 
 	return (
 		<div
