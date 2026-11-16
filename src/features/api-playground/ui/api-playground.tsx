@@ -43,6 +43,7 @@ import { KeyValueEditor } from "./key-value-editor";
 import { RequestBar } from "./request-bar";
 import { RequestBodyEditor } from "./request-body-editor";
 import { RequestFeedbackBanner } from "./request-feedback";
+import { ResponsePanel } from "./response-panel";
 
 export function ApiPlayground() {
 	const [draft, dispatch] = React.useReducer(
@@ -157,103 +158,112 @@ export function ApiPlayground() {
 	}
 
 	return (
-		<Card className="gap-0 py-0 shadow-xs">
-			<CardHeader className="flex flex-row flex-wrap items-center gap-3 border-b">
-				<span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-lg">
-					<HugeiconsIcon icon={ApiIcon} className="size-4" aria-hidden="true" />
-				</span>
-				<div className="min-w-0 flex-1">
-					<CardTitle className="text-sm">Request Builder</CardTitle>
-					<CardDescription className="text-xs">
-						Compose an HTTP request with query parameters, headers, and a body.
-					</CardDescription>
-				</div>
-			</CardHeader>
+		<div className="flex flex-col gap-6">
+			<Card className="gap-0 py-0 shadow-xs">
+				<CardHeader className="flex flex-row flex-wrap items-center gap-3 border-b">
+					<span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-lg">
+						<HugeiconsIcon
+							icon={ApiIcon}
+							className="size-4"
+							aria-hidden="true"
+						/>
+					</span>
+					<div className="min-w-0 flex-1">
+						<CardTitle className="text-sm">Request Builder</CardTitle>
+						<CardDescription className="text-xs">
+							Compose an HTTP request with query parameters, headers, and a
+							body.
+						</CardDescription>
+					</div>
+				</CardHeader>
 
-			<CardContent className="p-0">
-				<div className="flex flex-col gap-3 border-b p-4">
-					<RequestBar
-						method={draft.method}
-						url={draft.url}
-						isSending={isSending}
-						onMethodChange={(method) =>
-							updateDraft({ type: "set-method", method })
-						}
-						onUrlChange={(url) => updateDraft({ type: "set-url", url })}
-						onSubmit={() => void handleSend()}
-						onCancel={handleCancel}
-					/>
+				<CardContent className="p-0">
+					<div className="flex flex-col gap-3 border-b p-4">
+						<RequestBar
+							method={draft.method}
+							url={draft.url}
+							isSending={isSending}
+							onMethodChange={(method) =>
+								updateDraft({ type: "set-method", method })
+							}
+							onUrlChange={(url) => updateDraft({ type: "set-url", url })}
+							onSubmit={() => void handleSend()}
+							onCancel={handleCancel}
+						/>
 
-					{feedback ? <RequestFeedbackBanner feedback={feedback} /> : null}
-				</div>
-
-				<Tabs defaultValue="params" className="gap-0">
-					<div className="border-b px-4 py-2">
-						<TabsList aria-label="Request configuration">
-							<TabsTrigger value="params">
-								Params
-								<TabCount count={paramsCount} />
-							</TabsTrigger>
-							<TabsTrigger value="headers">
-								Headers
-								<TabCount count={headersCount} />
-							</TabsTrigger>
-							<TabsTrigger value="body">
-								Body
-								{draft.bodyType !== "none" ? (
-									<span className="text-muted-foreground text-[0.7rem]">
-										{draft.bodyType === "json" ? "JSON" : "Text"}
-									</span>
-								) : null}
-							</TabsTrigger>
-						</TabsList>
+						{feedback ? <RequestFeedbackBanner feedback={feedback} /> : null}
 					</div>
 
-					<TabsContent value="params" className="p-4">
-						<KeyValueEditor
-							rows={draft.params}
-							icon={Link01Icon}
-							itemLabel="Query parameter"
-							emptyTitle="No query parameters"
-							emptyDescription="Add key-value pairs to append them to the request URL."
-							addLabel="Add parameter"
-							onAdd={() => addRow("params")}
-							onChange={(id, field, value) =>
-								changeRow("params", id, field, value)
-							}
-							onRemove={(id) => removeRow("params", id)}
-						/>
-					</TabsContent>
+					<Tabs defaultValue="params" className="gap-0">
+						<div className="border-b px-4 py-2">
+							<TabsList aria-label="Request configuration">
+								<TabsTrigger value="params">
+									Params
+									<TabCount count={paramsCount} />
+								</TabsTrigger>
+								<TabsTrigger value="headers">
+									Headers
+									<TabCount count={headersCount} />
+								</TabsTrigger>
+								<TabsTrigger value="body">
+									Body
+									{draft.bodyType !== "none" ? (
+										<span className="text-muted-foreground text-[0.7rem]">
+											{draft.bodyType === "json" ? "JSON" : "Text"}
+										</span>
+									) : null}
+								</TabsTrigger>
+							</TabsList>
+						</div>
 
-					<TabsContent value="headers" className="p-4">
-						<KeyValueEditor
-							rows={draft.headers}
-							icon={Settings02Icon}
-							itemLabel="Header"
-							emptyTitle="No headers"
-							emptyDescription="Add headers such as Authorization or Content-Type."
-							addLabel="Add header"
-							onAdd={() => addRow("headers")}
-							onChange={(id, field, value) =>
-								changeRow("headers", id, field, value)
-							}
-							onRemove={(id) => removeRow("headers", id)}
-						/>
-					</TabsContent>
+						<TabsContent value="params" className="p-4">
+							<KeyValueEditor
+								rows={draft.params}
+								icon={Link01Icon}
+								itemLabel="Query parameter"
+								emptyTitle="No query parameters"
+								emptyDescription="Add key-value pairs to append them to the request URL."
+								addLabel="Add parameter"
+								onAdd={() => addRow("params")}
+								onChange={(id, field, value) =>
+									changeRow("params", id, field, value)
+								}
+								onRemove={(id) => removeRow("params", id)}
+							/>
+						</TabsContent>
 
-					<TabsContent value="body" className="p-4">
-						<RequestBodyEditor
-							bodyType={draft.bodyType}
-							body={draft.body}
-							onBodyTypeChange={(bodyType) =>
-								updateDraft({ type: "set-body-type", bodyType })
-							}
-							onBodyChange={(body) => updateDraft({ type: "set-body", body })}
-						/>
-					</TabsContent>
-				</Tabs>
-			</CardContent>
-		</Card>
+						<TabsContent value="headers" className="p-4">
+							<KeyValueEditor
+								rows={draft.headers}
+								icon={Settings02Icon}
+								itemLabel="Header"
+								emptyTitle="No headers"
+								emptyDescription="Add headers such as Authorization or Content-Type."
+								addLabel="Add header"
+								onAdd={() => addRow("headers")}
+								onChange={(id, field, value) =>
+									changeRow("headers", id, field, value)
+								}
+								onRemove={(id) => removeRow("headers", id)}
+							/>
+						</TabsContent>
+
+						<TabsContent value="body" className="p-4">
+							<RequestBodyEditor
+								bodyType={draft.bodyType}
+								body={draft.body}
+								onBodyTypeChange={(bodyType) =>
+									updateDraft({ type: "set-body-type", bodyType })
+								}
+								onBodyChange={(body) => updateDraft({ type: "set-body", body })}
+							/>
+						</TabsContent>
+					</Tabs>
+				</CardContent>
+			</Card>
+
+			<ResponsePanel execution={lastExecution} isSending={isSending} />
+		</div>
 	);
 }
 
