@@ -48,7 +48,16 @@ describe("requestSendReducer", () => {
 					statusText: "Not Found",
 				}),
 			},
-			{ status: "network-error", message: "Network request failed." },
+			{
+				status: "network-error",
+				message: "The request could not reach the server.",
+				hints: ["Check the URL and the server."],
+			},
+			{
+				status: "timeout",
+				message: "The request timed out after 30 seconds.",
+				timeoutMs: 30_000,
+			},
 			{ status: "canceled" },
 			{ status: "unexpected-error", message: "Unexpected error." },
 		];
@@ -102,6 +111,41 @@ describe("requestSendReducer", () => {
 
 		expect(state.validationIssue).toBeNull();
 		expect(state.execution).toBe(execution);
+	});
+
+	it("clears a validation issue when a new request starts", () => {
+		let state = requestSendReducer(createRequestSendState(), {
+			type: "validation-failed",
+			issue: { code: "invalid-url", message: "Enter a valid URL." },
+		});
+
+		state = requestSendReducer(state, { type: "start" });
+
+		expect(state.validationIssue).toBeNull();
+		expect(state.isSending).toBe(true);
+	});
+
+	it("replaces a previous error with a successful execution", () => {
+		const successExecution: RequestExecution = {
+			status: "success",
+			response: createResponse(),
+		};
+		let state = requestSendReducer(createRequestSendState(), {
+			type: "settled",
+			execution: {
+				status: "network-error",
+				message: "The request could not reach the server.",
+				hints: [],
+			},
+		});
+
+		state = requestSendReducer(state, {
+			type: "settled",
+			execution: successExecution,
+		});
+
+		expect(state.execution).toBe(successExecution);
+		expect(state.validationIssue).toBeNull();
 	});
 
 	it("returns the same state when there is no validation issue to clear", () => {

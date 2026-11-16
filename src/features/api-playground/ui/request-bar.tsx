@@ -19,14 +19,17 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/shared/lib/utils";
 
+import { REQUEST_TIMEOUT_OPTIONS } from "../model/request-timeout";
 import { HTTP_METHODS, type HttpMethod } from "../model/types";
 
 type RequestBarProps = {
 	method: HttpMethod;
 	url: string;
+	timeoutMs: number;
 	isSending: boolean;
 	onMethodChange: (method: HttpMethod) => void;
 	onUrlChange: (url: string) => void;
+	onTimeoutChange: (timeoutMs: number) => void;
 	onSubmit: () => void;
 	onCancel: () => void;
 };
@@ -36,12 +39,19 @@ const HTTP_METHOD_ITEMS = HTTP_METHODS.map((method) => ({
 	label: method,
 }));
 
+const TIMEOUT_ITEMS = REQUEST_TIMEOUT_OPTIONS.map((option) => ({
+	value: String(option.value),
+	label: option.label,
+}));
+
 export function RequestBar({
 	method,
 	url,
+	timeoutMs,
 	isSending,
 	onMethodChange,
 	onUrlChange,
+	onTimeoutChange,
 	onSubmit,
 	onCancel,
 }: RequestBarProps) {
@@ -104,6 +114,39 @@ export function RequestBar({
 			</div>
 
 			<div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+				<div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+					<span className="hidden sm:inline">Timeout</span>
+					<Select
+						value={String(timeoutMs)}
+						items={TIMEOUT_ITEMS}
+						onValueChange={(value) => {
+							if (value) {
+								onTimeoutChange(Number(value));
+							}
+						}}
+						disabled={isSending}
+					>
+						<SelectTrigger
+							type="button"
+							className="w-20 shrink-0 font-mono text-xs"
+							aria-label="Request timeout"
+						>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{REQUEST_TIMEOUT_OPTIONS.map((item) => (
+								<SelectItem
+									key={item.value}
+									value={String(item.value)}
+									className="font-mono text-xs"
+								>
+									{item.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
 				<Button
 					type="submit"
 					disabled={!canSubmit}

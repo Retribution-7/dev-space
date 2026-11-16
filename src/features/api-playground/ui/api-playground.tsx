@@ -25,6 +25,7 @@ import {
 	type RequestDraftAction,
 	requestDraftReducer,
 } from "../model/request-draft";
+import { UNEXPECTED_REQUEST_ERROR_MESSAGE } from "../model/request-errors";
 import {
 	describeRequestExecution,
 	type RequestFeedback,
@@ -33,6 +34,7 @@ import {
 	createRequestSendState,
 	requestSendReducer,
 } from "../model/request-send-state";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "../model/request-timeout";
 import type {
 	KeyValueField,
 	KeyValueSection,
@@ -57,6 +59,7 @@ export function ApiPlayground() {
 		createRequestSendState,
 	);
 	const { isSending, execution: lastExecution, validationIssue } = sendState;
+	const [timeoutMs, setTimeoutMs] = React.useState(DEFAULT_REQUEST_TIMEOUT_MS);
 	const abortRef = React.useRef<AbortController | null>(null);
 	const requestIdRef = React.useRef(0);
 	const isSendingRef = React.useRef(false);
@@ -108,7 +111,9 @@ export function ApiPlayground() {
 			return;
 		}
 
-		const preparation = prepareRequest(draft);
+		const preparation = prepareRequest(draft, {
+			pageProtocol: window.location.protocol,
+		});
 
 		if (!preparation.ok) {
 			dispatchSend({
@@ -132,11 +137,12 @@ export function ApiPlayground() {
 			try {
 				execution = await executeRequest(preparation.request, {
 					signal: controller.signal,
+					timeoutMs,
 				});
-			} catch (error) {
+			} catch {
 				execution = {
 					status: "unexpected-error",
-					message: getUnexpectedMessage(error),
+					message: UNEXPECTED_REQUEST_ERROR_MESSAGE,
 				};
 			}
 
@@ -182,11 +188,13 @@ export function ApiPlayground() {
 						<RequestBar
 							method={draft.method}
 							url={draft.url}
+							timeoutMs={timeoutMs}
 							isSending={isSending}
 							onMethodChange={(method) =>
 								updateDraft({ type: "set-method", method })
 							}
 							onUrlChange={(url) => updateDraft({ type: "set-url", url })}
+							onTimeoutChange={setTimeoutMs}
 							onSubmit={() => void handleSend()}
 							onCancel={handleCancel}
 						/>
@@ -273,12 +281,4 @@ function TabCount({ count }: { count: number }) {
 			({count})
 		</span>
 	);
-}
-
-function getUnexpectedMessage(error: unknown): string {
-	if (error instanceof Error && error.message) {
-		return `Something went wrong while sending the request: ${error.message}`;
-	}
-
-	return "Something went wrong while sending the request.";
 }

@@ -7,6 +7,7 @@ import {
 	CodeIcon,
 	Database01Icon,
 	File01Icon,
+	HourglassIcon,
 	InboxIcon,
 	Loading03Icon,
 	Settings02Icon,
@@ -114,6 +115,15 @@ function ResponsePanelContent({ view }: { view: ResponsePanelView }) {
 					title="Network error"
 					description={view.message}
 					code={view.code}
+					details={view.hints}
+				/>
+			);
+		case "timeout":
+			return (
+				<FailureState
+					icon={HourglassIcon}
+					title="Request timed out"
+					description={view.message}
 				/>
 			);
 		case "canceled":
@@ -125,7 +135,13 @@ function ResponsePanelContent({ view }: { view: ResponsePanelView }) {
 				/>
 			);
 		case "unexpected-error":
-			return <FailureState title="Request failed" description={view.message} />;
+			return (
+				<FailureState
+					title="Request failed"
+					description={view.message}
+					code={view.code}
+				/>
+			);
 	}
 }
 
@@ -486,14 +502,19 @@ function FailureState({
 	title,
 	description,
 	code,
+	details,
+	icon,
 	tone = "error",
 }: {
 	title: string;
 	description: string;
 	code?: string;
+	details?: string[];
+	icon?: IconSvgElement;
 	tone?: "error" | "neutral";
 }) {
 	const isError = tone === "error";
+	const displayIcon = icon ?? (isError ? AlertCircleIcon : CancelCircleIcon);
 
 	return (
 		<div role={isError ? "alert" : "status"} className="p-4">
@@ -504,7 +525,7 @@ function FailureState({
 				)}
 			>
 				<HugeiconsIcon
-					icon={isError ? AlertCircleIcon : CancelCircleIcon}
+					icon={displayIcon}
 					className={cn(
 						"mt-0.5 size-4 shrink-0",
 						isError ? "text-destructive" : "text-muted-foreground",
@@ -518,6 +539,13 @@ function FailureState({
 						<p className="text-muted-foreground mt-2 font-mono text-xs">
 							Code: {code}
 						</p>
+					) : null}
+					{details && details.length > 0 ? (
+						<ul className="text-muted-foreground mt-2 list-disc space-y-1 pl-5 text-xs">
+							{details.map((detail) => (
+								<li key={detail}>{detail}</li>
+							))}
+						</ul>
 					) : null}
 				</div>
 			</div>

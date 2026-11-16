@@ -39,7 +39,11 @@ export type RequestDraft = {
 };
 
 export type RequestValidationIssueCode =
-	"empty-url" | "invalid-url" | "unsupported-protocol" | "invalid-json";
+	| "empty-url"
+	| "invalid-url"
+	| "unsupported-protocol"
+	| "mixed-content"
+	| "invalid-json";
 
 export type RequestValidationIssue = {
 	code: RequestValidationIssueCode;
@@ -70,6 +74,7 @@ export type HttpResponse = {
 export type RequestExecution =
 	| { status: "success"; response: HttpResponse }
 	| { status: "http-error"; response: HttpResponse }
-	| { status: "network-error"; message: string; code?: string }
+	| { status: "network-error"; message: string; code?: string; hints: string[] }
+	| { status: "timeout"; message: string; timeoutMs: number }
 	| { status: "canceled" }
-	| { status: "unexpected-error"; message: string };
+	| { status: "unexpected-error"; message: string; code?: string };

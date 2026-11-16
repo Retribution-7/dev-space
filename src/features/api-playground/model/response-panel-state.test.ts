@@ -55,15 +55,34 @@ describe("getResponsePanelView", () => {
 			getResponsePanelView(
 				{
 					status: "network-error",
-					message: "Network request failed.",
+					message: "The request could not reach the server.",
 					code: "ERR_NETWORK",
+					hints: ["Check the URL and the server."],
 				},
 				false,
 			),
 		).toEqual({
 			kind: "network-error",
-			message: "Network request failed.",
+			message: "The request could not reach the server.",
 			code: "ERR_NETWORK",
+			hints: ["Check the URL and the server."],
+		});
+	});
+
+	it("shows timeouts without an HTTP response", () => {
+		expect(
+			getResponsePanelView(
+				{
+					status: "timeout",
+					message: "The request timed out after 30 seconds.",
+					timeoutMs: 30_000,
+				},
+				false,
+			),
+		).toEqual({
+			kind: "timeout",
+			message: "The request timed out after 30 seconds.",
+			timeoutMs: 30_000,
 		});
 	});
 
@@ -79,12 +98,14 @@ describe("getResponsePanelView", () => {
 				{
 					status: "unexpected-error",
 					message: "Something went wrong.",
+					code: "ERR_BAD_OPTION",
 				},
 				false,
 			),
 		).toEqual({
 			kind: "unexpected-error",
 			message: "Something went wrong.",
+			code: "ERR_BAD_OPTION",
 		});
 	});
 });

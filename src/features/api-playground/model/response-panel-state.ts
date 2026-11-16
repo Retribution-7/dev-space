@@ -4,9 +4,10 @@ export type ResponsePanelView =
 	| { kind: "empty" }
 	| { kind: "loading" }
 	| { kind: "response"; response: HttpResponse }
-	| { kind: "network-error"; message: string; code?: string }
+	| { kind: "network-error"; message: string; code?: string; hints: string[] }
+	| { kind: "timeout"; message: string; timeoutMs: number }
 	| { kind: "canceled" }
-	| { kind: "unexpected-error"; message: string };
+	| { kind: "unexpected-error"; message: string; code?: string };
 
 /**
  * Derives what the Response panel should show. Loading takes precedence over
@@ -34,10 +35,21 @@ export function getResponsePanelView(
 				kind: "network-error",
 				message: execution.message,
 				code: execution.code,
+				hints: [...execution.hints],
+			};
+		case "timeout":
+			return {
+				kind: "timeout",
+				message: execution.message,
+				timeoutMs: execution.timeoutMs,
 			};
 		case "canceled":
 			return { kind: "canceled" };
 		case "unexpected-error":
-			return { kind: "unexpected-error", message: execution.message };
+			return {
+				kind: "unexpected-error",
+				message: execution.message,
+				code: execution.code,
+			};
 	}
 }

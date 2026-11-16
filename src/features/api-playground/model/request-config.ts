@@ -1,4 +1,5 @@
 import { toKeyValueEntries } from "./request-draft";
+import { MIXED_CONTENT_MESSAGE } from "./request-errors";
 import type {
 	KeyValueEntry,
 	KeyValueRow,
@@ -12,6 +13,10 @@ const INVALID_URL_MESSAGE =
 	"Enter a valid absolute URL, for example https://api.example.com/users.";
 const INVALID_JSON_MESSAGE =
 	"Request body is not valid JSON. Check the syntax and try again.";
+
+export type PrepareRequestOptions = {
+	pageProtocol?: string;
+};
 
 export type RequestBodyBuildResult =
 	| { ok: true; data?: string; contentType?: string }
@@ -92,11 +97,20 @@ export function buildRequestBody(draft: RequestDraft): RequestBodyBuildResult {
 	};
 }
 
-export function prepareRequest(draft: RequestDraft): PrepareRequestResult {
+export function prepareRequest(
+	draft: RequestDraft,
+	{ pageProtocol }: PrepareRequestOptions = {},
+): PrepareRequestResult {
 	const urlResult = normalizeRequestUrl(draft.url);
 
 	if (!urlResult.ok) {
 		return urlResult;
+	}
+
+	const mixedContentIssue = getMixedContentIssue(urlResult.url, pageProtocol);
+
+	if (mixedContentIssue) {
+		return { ok: false, issue: mixedContentIssue };
 	}
 
 	const bodyResult = buildRequestBody(draft);
@@ -155,4 +169,38 @@ function normalizeRequestUrl(rawUrl: string): RequestUrlResult {
 	}
 
 	return { ok: true, url: parsedUrl.toString() };
+}
+
+function getMixedContentIssue(
+	url: string,
+	pageProtocol?: string,
+): RequestValidationIssue | null {
+	if (pageProtocol !== "https:" && pageProtocol !== "https") {
+		return null;
+	}
+
+	const parsedUrl = new URL(url);
+
+	if (parsedUrl.protocol !== "http:") {
+		return null;
+	}
+
+	if (isLoopbackHost(parsedUrl.hostname)) {
+		return null;
+	}
+
+	return {
+		code: "mixed-content",
+		message: MIXED_CONTENT_MESSAGE,
+	};
+}
+
+function isLoopbackHost(hostname: string): boolean {
+	return (
+		hostname === "localhost" ||
+		hostname.endsWith(".localhost") ||
+		hostname === "127.0.0.1" ||
+		hostname === "::1" ||
+		hostname === "[::1]"
+	);
 }

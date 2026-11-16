@@ -7,6 +7,12 @@ import axios, {
 } from "axios";
 import { describe, expect, it, mock } from "bun:test";
 
+import {
+	NETWORK_ERROR_HINTS,
+	NETWORK_ERROR_MESSAGE,
+	UNEXPECTED_REQUEST_ERROR_MESSAGE,
+} from "../model/request-errors";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "../model/request-timeout";
 import type { PreparedHttpRequest } from "../model/types";
 
 import { executeRequest } from "./send-request";
@@ -84,6 +90,7 @@ describe("executeRequest", () => {
 			url: request.url,
 			data: request.data,
 			responseType: "text",
+			timeout: DEFAULT_REQUEST_TIMEOUT_MS,
 		});
 		expect(capturedConfig?.params).toBe(request.params);
 		expect(capturedConfig?.headers).toBe(request.headers);
@@ -143,7 +150,7 @@ describe("executeRequest", () => {
 		}
 	});
 
-	it("classifies Axios errors without a response as network errors", async () => {
+	it("classifies Axios errors without a response as network errors with hints", async () => {
 		const executor = mock(() =>
 			Promise.reject(new AxiosError("Network Error", AxiosError.ERR_NETWORK)),
 		);
@@ -154,9 +161,61 @@ describe("executeRequest", () => {
 
 		expect(result).toEqual({
 			status: "network-error",
-			message:
-				"Network request failed. Check the URL, your connection, and the server's CORS policy.",
+			message: NETWORK_ERROR_MESSAGE,
 			code: "ERR_NETWORK",
+			hints: [...NETWORK_ERROR_HINTS],
+		});
+	});
+
+	it("classifies timeout errors as timeout failures", async () => {
+		for (const code of [AxiosError.ETIMEDOUT, AxiosError.ECONNABORTED]) {
+			const executor = mock(() =>
+				Promise.reject(new AxiosError("timeout of 5000ms exceeded", code)),
+			);
+
+			const result = await executeRequest(createPreparedRequest(), {
+				executor,
+				timeoutMs: 5_000,
+			});
+
+			expect(result.status).toBe("timeout");
+
+			if (result.status === "timeout") {
+				expect(result.message).toContain("5 seconds");
+				expect(result.timeoutMs).toBe(5_000);
+			}
+		}
+	});
+
+	it("passes a custom timeout to Axios", async () => {
+		let capturedConfig: AxiosRequestConfig | undefined;
+		const executor = mock((config: AxiosRequestConfig) => {
+			capturedConfig = config;
+
+			return Promise.resolve(createResponse());
+		});
+
+		await executeRequest(createPreparedRequest(), {
+			executor,
+			timeoutMs: 7_500,
+		});
+
+		expect(capturedConfig?.timeout).toBe(7_500);
+	});
+
+	it("classifies Axios setup errors as unexpected without exposing the raw error", async () => {
+		const executor = mock(() =>
+			Promise.reject(new AxiosError("bad option", AxiosError.ERR_BAD_OPTION)),
+		);
+
+		const result = await executeRequest(createPreparedRequest(), {
+			executor,
+		});
+
+		expect(result).toEqual({
+			status: "unexpected-error",
+			message: UNEXPECTED_REQUEST_ERROR_MESSAGE,
+			code: "ERR_BAD_OPTION",
 		});
 	});
 
@@ -185,7 +244,19 @@ describe("executeRequest", () => {
 		expect(await execution).toEqual({ status: "canceled" });
 	});
 
-	it("does not reject when an unexpected error occurs", async () => {
+	it("classifies Axios cancel codes as canceled even without a CanceledError instance", async () => {
+		const executor = mock(() =>
+			Promise.reject(new AxiosError("canceled", AxiosError.ERR_CANCELED)),
+		);
+
+		const result = await executeRequest(createPreparedRequest(), {
+			executor,
+		});
+
+		expect(result).toEqual({ status: "canceled" });
+	});
+
+	it("does not reject when an unexpected error occurs and does not expose its message", async () => {
 		const executor = mock(() => Promise.reject(new Error("boom")));
 
 		const result = await executeRequest(createPreparedRequest(), {
@@ -195,7 +266,8 @@ describe("executeRequest", () => {
 		expect(result.status).toBe("unexpected-error");
 
 		if (result.status === "unexpected-error") {
-			expect(result.message).toContain("boom");
+			expect(result.message).toBe(UNEXPECTED_REQUEST_ERROR_MESSAGE);
+			expect(result.message).not.toContain("boom");
 		}
 	});
 

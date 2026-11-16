@@ -367,3 +367,54 @@ describe("prepareRequest body", () => {
 		expect(draft).toEqual(snapshot);
 	});
 });
+
+describe("prepareRequest mixed content protection", () => {
+	it("rejects HTTP URLs when the page is served over HTTPS", () => {
+		const result = prepareRequest(
+			createDraft({ url: "http://api.example.com/users" }),
+			{ pageProtocol: "https:" },
+		);
+
+		expect(result.ok).toBe(false);
+
+		if (!result.ok) {
+			expect(result.issue.code).toBe("mixed-content");
+			expect(result.issue.message).toContain("mixed content");
+		}
+	});
+
+	it("allows HTTP URLs when the page is served over HTTP", () => {
+		expect(
+			prepareRequest(createDraft({ url: "http://api.example.com/users" }), {
+				pageProtocol: "http:",
+			}).ok,
+		).toBe(true);
+	});
+
+	it("allows HTTP URLs to loopback hosts", () => {
+		for (const url of [
+			"http://localhost:3000/api",
+			"http://127.0.0.1:8080/api",
+		]) {
+			expect(
+				prepareRequest(createDraft({ url }), {
+					pageProtocol: "https:",
+				}).ok,
+			).toBe(true);
+		}
+	});
+
+	it("allows HTTPS URLs when the page is served over HTTPS", () => {
+		expect(
+			prepareRequest(createDraft({ url: "https://api.example.com/users" }), {
+				pageProtocol: "https:",
+			}).ok,
+		).toBe(true);
+	});
+
+	it("does not block anything when the page protocol is unknown", () => {
+		expect(
+			prepareRequest(createDraft({ url: "http://api.example.com/users" })).ok,
+		).toBe(true);
+	});
+});

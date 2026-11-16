@@ -1,10 +1,18 @@
 import axios, {
+	AxiosError,
 	AxiosHeaders,
 	type AxiosRequestConfig,
 	type AxiosResponse,
 	type RawAxiosHeaders,
 } from "axios";
 
+import {
+	createTimeoutErrorMessage,
+	NETWORK_ERROR_HINTS,
+	NETWORK_ERROR_MESSAGE,
+	UNEXPECTED_REQUEST_ERROR_MESSAGE,
+} from "../model/request-errors";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "../model/request-timeout";
 import type {
 	HttpResponse,
 	PreparedHttpRequest,
@@ -17,8 +25,19 @@ export type RequestExecutor = (
 
 export type ExecuteRequestOptions = {
 	signal?: AbortSignal;
+	timeoutMs?: number;
 	executor?: RequestExecutor;
 };
+
+const NETWORK_ERROR_CODES = new Set([
+	AxiosError.ERR_NETWORK,
+	AxiosError.ECONNREFUSED,
+]);
+
+const TIMEOUT_ERROR_CODES = new Set([
+	AxiosError.ETIMEDOUT,
+	AxiosError.ECONNABORTED,
+]);
 
 const httpClient = axios.create();
 
@@ -27,7 +46,11 @@ const defaultRequestExecutor: RequestExecutor = (config) =>
 
 export async function executeRequest(
 	request: PreparedHttpRequest,
-	{ signal, executor = defaultRequestExecutor }: ExecuteRequestOptions = {},
+	{
+		signal,
+		timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+		executor = defaultRequestExecutor,
+	}: ExecuteRequestOptions = {},
 ): Promise<RequestExecution> {
 	const startedAt = performance.now();
 
@@ -39,6 +62,7 @@ export async function executeRequest(
 			headers: request.headers,
 			data: request.data,
 			responseType: "text",
+			timeout: timeoutMs,
 			signal,
 		});
 
@@ -49,7 +73,10 @@ export async function executeRequest(
 	} catch (error) {
 		const durationMs = performance.now() - startedAt;
 
-		if (axios.isCancel(error)) {
+		if (
+			axios.isCancel(error) ||
+			(axios.isAxiosError(error) && error.code === AxiosError.ERR_CANCELED)
+		) {
 			return { status: "canceled" };
 		}
 
@@ -61,17 +88,33 @@ export async function executeRequest(
 				};
 			}
 
+			if (error.code && TIMEOUT_ERROR_CODES.has(error.code)) {
+				return {
+					status: "timeout",
+					message: createTimeoutErrorMessage(timeoutMs),
+					timeoutMs,
+				};
+			}
+
+			if (!error.code || NETWORK_ERROR_CODES.has(error.code)) {
+				return {
+					status: "network-error",
+					message: NETWORK_ERROR_MESSAGE,
+					...(error.code ? { code: error.code } : {}),
+					hints: [...NETWORK_ERROR_HINTS],
+				};
+			}
+
 			return {
-				status: "network-error",
-				message:
-					"Network request failed. Check the URL, your connection, and the server's CORS policy.",
+				status: "unexpected-error",
+				message: UNEXPECTED_REQUEST_ERROR_MESSAGE,
 				code: error.code,
 			};
 		}
 
 		return {
 			status: "unexpected-error",
-			message: getUnexpectedErrorMessage(error),
+			message: UNEXPECTED_REQUEST_ERROR_MESSAGE,
 		};
 	}
 }
@@ -132,12 +175,4 @@ function getResponseSize(
 	}
 
 	return new TextEncoder().encode(body).byteLength;
-}
-
-function getUnexpectedErrorMessage(error: unknown): string {
-	if (error instanceof Error && error.message) {
-		return `Something went wrong while sending the request: ${error.message}`;
-	}
-
-	return "Something went wrong while sending the request.";
 }

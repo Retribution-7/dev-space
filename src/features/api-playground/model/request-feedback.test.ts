@@ -50,14 +50,40 @@ describe("describeRequestExecution", () => {
 	it("formats network errors with the Axios error code", () => {
 		const feedback = describeRequestExecution({
 			status: "network-error",
-			message:
-				"Network request failed. Check the URL, your connection, and the server's CORS policy.",
+			message: "The request could not reach the server.",
 			code: "ERR_NETWORK",
+			hints: ["Check the URL and the server."],
 		});
 
 		expect(feedback.tone).toBe("error");
-		expect(feedback.message).toContain("Network request failed.");
+		expect(feedback.message).toContain(
+			"The request could not reach the server.",
+		);
 		expect(feedback.message).toContain("ERR_NETWORK");
+	});
+
+	it("formats timeout errors with the configured duration", () => {
+		const feedback = describeRequestExecution({
+			status: "timeout",
+			message:
+				"The request timed out after 30 seconds. The server did not respond in time; try again or increase the timeout.",
+			timeoutMs: 30_000,
+		});
+
+		expect(feedback.tone).toBe("error");
+		expect(feedback.message).toContain("timed out");
+	});
+
+	it("formats unexpected errors without exposing the raw error", () => {
+		const feedback = describeRequestExecution({
+			status: "unexpected-error",
+			message: "Something went wrong while sending the request.",
+			code: "ERR_BAD_OPTION",
+		});
+
+		expect(feedback.tone).toBe("error");
+		expect(feedback.message).toContain("Something went wrong");
+		expect(feedback.message).toContain("ERR_BAD_OPTION");
 	});
 
 	it("formats canceled requests separately", () => {

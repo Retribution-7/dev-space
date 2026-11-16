@@ -26,6 +26,11 @@ export function describeRequestExecution(
 				tone: "error",
 				message: `${execution.message}${execution.code ? ` (${execution.code})` : ""}`,
 			};
+		case "timeout":
+			return {
+				tone: "error",
+				message: execution.message,
+			};
 		case "canceled":
 			return {
 				tone: "info",
@@ -34,7 +39,7 @@ export function describeRequestExecution(
 		case "unexpected-error":
 			return {
 				tone: "error",
-				message: execution.message,
+				message: `${execution.message}${execution.code ? ` (${execution.code})` : ""}`,
 			};
 	}
 }
