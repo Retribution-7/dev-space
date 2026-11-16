@@ -11,13 +11,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -29,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/shared/lib/utils";
 
 import type {
 	CollectionSavedRequest,
@@ -42,10 +37,14 @@ import {
 } from "../model/use-request-collections";
 
 import { ConfirmDialog } from "./confirm-dialog";
+import { EmptyState } from "./empty-state";
+import { PanelHeader } from "./panel-header";
 
 type CollectionsPanelProps = {
 	draft: RequestDraft;
 	onRestore: (draft: RequestDraft) => void;
+	onSaved?: () => void;
+	className?: string;
 };
 
 type CollectionFormDialogProps = {
@@ -78,7 +77,12 @@ type DeleteTarget =
 			name: string;
 	  };
 
-export function CollectionsPanel({ draft, onRestore }: CollectionsPanelProps) {
+export function CollectionsPanel({
+	draft,
+	onRestore,
+	onSaved,
+	className,
+}: CollectionsPanelProps) {
 	const {
 		collections,
 		createCollection,
@@ -107,43 +111,40 @@ export function CollectionsPanel({ draft, onRestore }: CollectionsPanelProps) {
 		<Card
 			role="region"
 			aria-label="Collections"
-			className="gap-0 py-0 shadow-xs"
+			className={cn(
+				"h-full gap-0 rounded-none border-0 py-0 shadow-none",
+				className,
+			)}
 		>
-			<CardHeader className="flex flex-row flex-wrap items-center gap-3 border-b">
-				<span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-lg">
-					<HugeiconsIcon
-						icon={FolderIcon}
-						className="size-4"
-						aria-hidden="true"
-					/>
-				</span>
-				<div className="min-w-0 flex-1">
-					<CardTitle className="text-sm">Collections</CardTitle>
-					<CardDescription className="text-xs">
-						Save request configurations for repeated use.
-					</CardDescription>
-				</div>
+			<PanelHeader
+				icon={FolderIcon}
+				title="Collections"
+				action={
+					hasHydrated ? (
+						<Button
+							type="button"
+							size="sm"
+							onClick={() => setIsCreateOpen(true)}
+						>
+							<HugeiconsIcon
+								icon={Add01Icon}
+								className="size-4"
+								data-icon="inline-start"
+								aria-hidden="true"
+							/>
+							New collection
+						</Button>
+					) : null
+				}
+			/>
 
-				{hasHydrated ? (
-					<Button type="button" size="sm" onClick={() => setIsCreateOpen(true)}>
-						<HugeiconsIcon
-							icon={Add01Icon}
-							className="size-3.5"
-							data-icon="inline-start"
-							aria-hidden="true"
-						/>
-						New collection
-					</Button>
-				) : null}
-			</CardHeader>
-
-			<CardContent className="p-0">
+			<CardContent className="flex flex-1 flex-col p-0">
 				{!hasHydrated ? (
 					<CollectionsSkeleton />
 				) : collections.length === 0 ? (
-					<EmptyCollectionsState onCreate={() => setIsCreateOpen(true)} />
+					<EmptyCollectionsState />
 				) : (
-					<div className="max-h-[32rem] overflow-y-auto">
+					<div>
 						{collections.map((collection) => (
 							<CollectionItem
 								key={collection.id}
@@ -215,6 +216,7 @@ export function CollectionsPanel({ draft, onRestore }: CollectionsPanelProps) {
 					onSubmit={(name) => {
 						saveRequest(saveTarget.id, { name, draft });
 						setSaveTarget(null);
+						onSaved?.();
 					}}
 				/>
 			) : null}
@@ -562,28 +564,14 @@ function RequestNameDialog({
 	);
 }
 
-function EmptyCollectionsState({ onCreate }: { onCreate: () => void }) {
+function EmptyCollectionsState() {
 	return (
-		<div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-			<span className="bg-muted text-muted-foreground grid size-10 place-items-center rounded-full">
-				<HugeiconsIcon icon={InboxIcon} className="size-5" aria-hidden="true" />
-			</span>
-			<div className="max-w-md">
-				<p className="text-sm font-medium">No collections yet</p>
-				<p className="text-muted-foreground mt-1 text-sm">
-					Create a collection to save request configurations for repeated use.
-				</p>
-			</div>
-			<Button type="button" size="sm" onClick={onCreate}>
-				<HugeiconsIcon
-					icon={Add01Icon}
-					className="size-3.5"
-					data-icon="inline-start"
-					aria-hidden="true"
-				/>
-				New collection
-			</Button>
-		</div>
+		<EmptyState
+			icon={InboxIcon}
+			title="No collections yet"
+			description="Create a collection to save request configurations for repeated use."
+			className="flex-1"
+		/>
 	);
 }
 

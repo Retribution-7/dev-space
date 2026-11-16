@@ -46,7 +46,7 @@ export function RequestFeedbackBanner({
 		<div
 			role={isError ? "alert" : "status"}
 			className={cn(
-				"flex items-start gap-2 rounded-lg border px-3 py-2 text-sm",
+				"flex items-start gap-2 border px-3 py-2 text-sm",
 				FEEDBACK_STYLES[feedback.tone],
 			)}
 		>

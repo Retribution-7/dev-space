@@ -68,117 +68,113 @@ export function RequestBar({
 
 	return (
 		<form
-			className="flex flex-col gap-2 sm:flex-row sm:items-center"
+			className="flex flex-wrap items-center gap-2"
 			onSubmit={handleSubmit}
 			aria-busy={isSending}
 		>
-			<div className="flex min-w-0 flex-1 items-center gap-2">
+			<Select
+				value={method}
+				items={HTTP_METHOD_ITEMS}
+				onValueChange={(value) => {
+					if (value) {
+						onMethodChange(value as HttpMethod);
+					}
+				}}
+			>
+				<SelectTrigger
+					type="button"
+					className="h-10 w-24 shrink-0 font-mono text-xs"
+					aria-label="HTTP method"
+				>
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					{HTTP_METHODS.map((item) => (
+						<SelectItem key={item} value={item} className="font-mono text-xs">
+							{item}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+
+			<InputGroup className="h-10 min-w-0 flex-1">
+				<InputGroupInput
+					type="text"
+					value={url}
+					onChange={(event) => onUrlChange(event.target.value)}
+					placeholder="https://api.example.com/resource"
+					aria-label="Request URL"
+					autoComplete="off"
+					inputMode="url"
+					spellCheck={false}
+					className="font-mono text-xs"
+				/>
+			</InputGroup>
+
+			<div className="flex shrink-0 items-center gap-2">
+				<span className="text-muted-foreground text-xs">Timeout</span>
 				<Select
-					value={method}
-					items={HTTP_METHOD_ITEMS}
+					value={String(timeoutMs)}
+					items={TIMEOUT_ITEMS}
 					onValueChange={(value) => {
 						if (value) {
-							onMethodChange(value as HttpMethod);
+							onTimeoutChange(Number(value));
 						}
 					}}
+					disabled={isSending}
 				>
 					<SelectTrigger
 						type="button"
-						className="w-24 shrink-0 font-mono text-xs"
-						aria-label="HTTP method"
+						className="h-10 w-20 shrink-0 font-mono text-xs"
+						aria-label="Request timeout"
 					>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						{HTTP_METHODS.map((item) => (
-							<SelectItem key={item} value={item} className="font-mono text-xs">
-								{item}
+						{REQUEST_TIMEOUT_OPTIONS.map((item) => (
+							<SelectItem
+								key={item.value}
+								value={String(item.value)}
+								className="font-mono text-xs"
+							>
+								{item.label}
 							</SelectItem>
 						))}
 					</SelectContent>
 				</Select>
-
-				<InputGroup className="min-w-0 flex-1">
-					<InputGroupInput
-						type="text"
-						value={url}
-						onChange={(event) => onUrlChange(event.target.value)}
-						placeholder="https://api.example.com/resource"
-						aria-label="Request URL"
-						autoComplete="off"
-						inputMode="url"
-						spellCheck={false}
-						className="font-mono text-xs"
-					/>
-				</InputGroup>
 			</div>
 
-			<div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
-				<div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-					<span className="hidden sm:inline">Timeout</span>
-					<Select
-						value={String(timeoutMs)}
-						items={TIMEOUT_ITEMS}
-						onValueChange={(value) => {
-							if (value) {
-								onTimeoutChange(Number(value));
-							}
-						}}
-						disabled={isSending}
-					>
-						<SelectTrigger
-							type="button"
-							className="w-20 shrink-0 font-mono text-xs"
-							aria-label="Request timeout"
-						>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{REQUEST_TIMEOUT_OPTIONS.map((item) => (
-								<SelectItem
-									key={item.value}
-									value={String(item.value)}
-									className="font-mono text-xs"
-								>
-									{item.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
+			<Button
+				type="submit"
+				disabled={!canSubmit}
+				className="h-10 shrink-0"
+				title={sendTitle}
+			>
+				<HugeiconsIcon
+					icon={isSending ? Loading03Icon : SentIcon}
+					className={cn("size-4", isSending && "animate-spin")}
+					data-icon="inline-start"
+					aria-hidden="true"
+				/>
+				{isSending ? "Sending..." : "Send"}
+			</Button>
 
+			{isSending ? (
 				<Button
-					type="submit"
-					disabled={!canSubmit}
-					className="flex-1 sm:flex-none"
-					title={sendTitle}
+					type="button"
+					variant="outline"
+					className="h-10 shrink-0"
+					onClick={onCancel}
 				>
 					<HugeiconsIcon
-						icon={isSending ? Loading03Icon : SentIcon}
-						className={cn("size-3.5", isSending && "animate-spin")}
+						icon={Cancel01Icon}
+						className="size-4"
 						data-icon="inline-start"
 						aria-hidden="true"
 					/>
-					{isSending ? "Sending..." : "Send"}
+					Cancel
 				</Button>
-
-				{isSending ? (
-					<Button
-						type="button"
-						variant="outline"
-						className="flex-1 sm:flex-none"
-						onClick={onCancel}
-					>
-						<HugeiconsIcon
-							icon={Cancel01Icon}
-							className="size-3.5"
-							data-icon="inline-start"
-							aria-hidden="true"
-						/>
-						Cancel
-					</Button>
-				) : null}
-			</div>
+			) : null}
 		</form>
 	);
 }

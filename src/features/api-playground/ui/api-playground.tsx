@@ -1,311 +1,117 @@
 "use client";
 
-import {
-	ApiIcon,
-	Link01Icon,
-	Settings02Icon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import * as React from "react";
 
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-import { executeRequest } from "../api/send-request";
-import { prepareRequest } from "../model/request-config";
 import {
+	cloneRequestDraft,
 	createRequestDraft,
-	getFilledRowCount,
 	type RequestDraftAction,
-	requestDraftReducer,
 } from "../model/request-draft";
-import { UNEXPECTED_REQUEST_ERROR_MESSAGE } from "../model/request-errors";
 import {
-	describeRequestExecution,
-	type RequestFeedback,
-} from "../model/request-feedback";
-import { createRequestHistoryEntry } from "../model/request-history";
-import { useRequestHistoryStore } from "../model/request-history-store";
-import {
-	createRequestSendState,
-	requestSendReducer,
-} from "../model/request-send-state";
-import { DEFAULT_REQUEST_TIMEOUT_MS } from "../model/request-timeout";
-import type {
-	KeyValueField,
-	KeyValueSection,
-	RequestDraft,
-	RequestExecution,
-} from "../model/types";
+	createOpenRequestTab,
+	createRequestWorkspaceState,
+	getActiveRequestTab,
+	requestWorkspaceReducer,
+} from "../model/request-workspace";
+import type { RequestDraft } from "../model/types";
 
-import { CollectionsPanel } from "./collections-panel";
 import { HistoryPanel } from "./history-panel";
-import { KeyValueEditor } from "./key-value-editor";
-import { RequestBar } from "./request-bar";
-import { RequestBodyEditor } from "./request-body-editor";
-import { RequestFeedbackBanner } from "./request-feedback";
-import { ResponsePanel } from "./response-panel";
+import { RequestTabsBar } from "./request-tabs-bar";
+import { RequestWorkspaceTab } from "./request-workspace-tab";
+import { WorkspaceSidebar } from "./workspace-sidebar";
 
 export function ApiPlayground() {
-	const [draft, dispatch] = React.useReducer(
-		requestDraftReducer,
+	const [workspace, dispatchWorkspace] = React.useReducer(
+		requestWorkspaceReducer,
 		undefined,
-		createRequestDraft,
+		createRequestWorkspaceState,
 	);
-	const [sendState, dispatchSend] = React.useReducer(
-		requestSendReducer,
-		undefined,
-		createRequestSendState,
-	);
-	const { isSending, execution: lastExecution, validationIssue } = sendState;
-	const [timeoutMs, setTimeoutMs] = React.useState(DEFAULT_REQUEST_TIMEOUT_MS);
-	const addHistoryEntry = useRequestHistoryStore((state) => state.addEntry);
-	const abortRef = React.useRef<AbortController | null>(null);
-	const requestIdRef = React.useRef(0);
-	const recordedHistoryRequestIdRef = React.useRef(0);
-	const isSendingRef = React.useRef(false);
-	const isMountedRef = React.useRef(true);
+	const activeTab = getActiveRequestTab(workspace);
+	const isMobile = useIsMobile();
+	const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
 
-	React.useEffect(() => {
-		isMountedRef.current = true;
-
-		return () => {
-			isMountedRef.current = false;
-			abortRef.current?.abort();
-		};
-	}, []);
-
-	const paramsCount = getFilledRowCount(draft.params);
-	const headersCount = getFilledRowCount(draft.headers);
-	const feedback: RequestFeedback | null = isSending
-		? null
-		: validationIssue
-			? { tone: "error", message: validationIssue.message }
-			: lastExecution
-				? describeRequestExecution(lastExecution)
-				: null;
-
-	function updateDraft(action: RequestDraftAction) {
-		dispatchSend({ type: "clear-validation" });
-		dispatch(action);
-	}
-
-	function addRow(section: KeyValueSection) {
-		updateDraft({ type: "add-row", section, id: crypto.randomUUID() });
-	}
-
-	function changeRow(
-		section: KeyValueSection,
-		id: string,
-		field: KeyValueField,
-		value: string,
-	) {
-		updateDraft({ type: "update-row", section, id, field, value });
-	}
-
-	function removeRow(section: KeyValueSection, id: string) {
-		updateDraft({ type: "remove-row", section, id });
-	}
-
-	async function handleSend() {
-		if (isSendingRef.current) {
-			return;
+	function handleToggleSidebar() {
+		if (isMobile) {
+			setIsMobileSidebarOpen((open) => !open);
+		} else {
+			setIsSidebarOpen((open) => !open);
 		}
+	}
 
-		const preparation = prepareRequest(draft, {
-			pageProtocol: window.location.protocol,
+	function handleCreateTab() {
+		dispatchWorkspace({
+			type: "create-tab",
+			tab: createOpenRequestTab({ id: crypto.randomUUID(), kind: "new" }),
 		});
-
-		if (!preparation.ok) {
-			dispatchSend({
-				type: "validation-failed",
-				issue: preparation.issue,
-			});
-			return;
-		}
-
-		const requestId = requestIdRef.current + 1;
-		const controller = new AbortController();
-		const startedAt = performance.now();
-
-		requestIdRef.current = requestId;
-		abortRef.current = controller;
-		isSendingRef.current = true;
-		dispatchSend({ type: "start" });
-
-		try {
-			let execution: RequestExecution;
-
-			try {
-				execution = await executeRequest(preparation.request, {
-					signal: controller.signal,
-					timeoutMs,
-				});
-			} catch {
-				execution = {
-					status: "unexpected-error",
-					message: UNEXPECTED_REQUEST_ERROR_MESSAGE,
-				};
-			}
-
-			if (requestId !== requestIdRef.current || !isMountedRef.current) {
-				return;
-			}
-
-			dispatchSend({ type: "settled", execution });
-
-			if (recordedHistoryRequestIdRef.current !== requestId) {
-				recordedHistoryRequestIdRef.current = requestId;
-				addHistoryEntry(
-					createRequestHistoryEntry(draft, execution, {
-						id: crypto.randomUUID(),
-						executedAt: new Date().toISOString(),
-						durationMs: performance.now() - startedAt,
-					}),
-				);
-			}
-		} finally {
-			if (requestId === requestIdRef.current) {
-				isSendingRef.current = false;
-				abortRef.current = null;
-			}
-		}
 	}
 
-	function handleRestore(draftToRestore: RequestDraft) {
-		updateDraft({ type: "restore-draft", draft: draftToRestore });
+	function handleOpenRequest(draft: RequestDraft) {
+		dispatchWorkspace({
+			type: "create-tab",
+			tab: createOpenRequestTab({
+				id: crypto.randomUUID(),
+				kind: "collection",
+				draft: cloneRequestDraft(draft),
+			}),
+		});
 	}
 
-	function handleCancel() {
-		abortRef.current?.abort();
+	function handleDraftAction(id: string, action: RequestDraftAction) {
+		dispatchWorkspace({ type: "update-draft", id, action });
+	}
+
+	function handleTimeoutChange(id: string, timeoutMs: number) {
+		dispatchWorkspace({ type: "set-timeout", id, timeoutMs });
+	}
+
+	function handleMarkActiveSaved() {
+		if (activeTab) {
+			dispatchWorkspace({ type: "mark-saved", id: activeTab.id });
+		}
 	}
 
 	return (
-		<div className="flex flex-col gap-6">
-			<Card className="gap-0 py-0 shadow-xs">
-				<CardHeader className="flex flex-row flex-wrap items-center gap-3 border-b">
-					<span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-lg">
-						<HugeiconsIcon
-							icon={ApiIcon}
-							className="size-4"
-							aria-hidden="true"
-						/>
-					</span>
-					<div className="min-w-0 flex-1">
-						<CardTitle className="text-sm">Request Builder</CardTitle>
-						<CardDescription className="text-xs">
-							Compose an HTTP request with query parameters, headers, and a
-							body.
-						</CardDescription>
+		<div className="flex flex-1 flex-col gap-4">
+			<div className="bg-card flex items-stretch overflow-hidden rounded-xl border shadow-xs">
+				<WorkspaceSidebar
+					isMobile={isMobile}
+					open={isMobile ? isMobileSidebarOpen : isSidebarOpen}
+					onOpenChange={isMobile ? setIsMobileSidebarOpen : setIsSidebarOpen}
+					draft={activeTab?.draft ?? createRequestDraft()}
+					onOpenRequest={handleOpenRequest}
+					onSaved={handleMarkActiveSaved}
+				/>
+
+				<div className="flex min-w-0 flex-1 flex-col">
+					<RequestTabsBar
+						tabs={workspace.tabs}
+						activeTabId={workspace.activeTabId}
+						onActivate={(id) => dispatchWorkspace({ type: "activate-tab", id })}
+						onClose={(id) => dispatchWorkspace({ type: "close-tab", id })}
+						onCreate={handleCreateTab}
+						onToggleSidebar={handleToggleSidebar}
+					/>
+
+					<div className="relative">
+						{workspace.tabs.map((tab) => (
+							<RequestWorkspaceTab
+								key={tab.id}
+								tab={tab}
+								isActive={tab.id === workspace.activeTabId}
+								onDraftAction={(action) => handleDraftAction(tab.id, action)}
+								onTimeoutChange={(timeoutMs) =>
+									handleTimeoutChange(tab.id, timeoutMs)
+								}
+							/>
+						))}
 					</div>
-				</CardHeader>
+				</div>
+			</div>
 
-				<CardContent className="p-0">
-					<div className="flex flex-col gap-3 border-b p-4">
-						<RequestBar
-							method={draft.method}
-							url={draft.url}
-							timeoutMs={timeoutMs}
-							isSending={isSending}
-							onMethodChange={(method) =>
-								updateDraft({ type: "set-method", method })
-							}
-							onUrlChange={(url) => updateDraft({ type: "set-url", url })}
-							onTimeoutChange={setTimeoutMs}
-							onSubmit={() => void handleSend()}
-							onCancel={handleCancel}
-						/>
-
-						{feedback ? <RequestFeedbackBanner feedback={feedback} /> : null}
-					</div>
-
-					<Tabs defaultValue="params" className="gap-0">
-						<div className="border-b px-4 py-2">
-							<TabsList aria-label="Request configuration">
-								<TabsTrigger value="params">
-									Params
-									<TabCount count={paramsCount} />
-								</TabsTrigger>
-								<TabsTrigger value="headers">
-									Headers
-									<TabCount count={headersCount} />
-								</TabsTrigger>
-								<TabsTrigger value="body">
-									Body
-									{draft.bodyType !== "none" ? (
-										<span className="text-muted-foreground text-[0.7rem]">
-											{draft.bodyType === "json" ? "JSON" : "Text"}
-										</span>
-									) : null}
-								</TabsTrigger>
-							</TabsList>
-						</div>
-
-						<TabsContent value="params" className="p-4">
-							<KeyValueEditor
-								rows={draft.params}
-								icon={Link01Icon}
-								itemLabel="Query parameter"
-								emptyTitle="No query parameters"
-								emptyDescription="Add key-value pairs to append them to the request URL."
-								addLabel="Add parameter"
-								onAdd={() => addRow("params")}
-								onChange={(id, field, value) =>
-									changeRow("params", id, field, value)
-								}
-								onRemove={(id) => removeRow("params", id)}
-							/>
-						</TabsContent>
-
-						<TabsContent value="headers" className="p-4">
-							<KeyValueEditor
-								rows={draft.headers}
-								icon={Settings02Icon}
-								itemLabel="Header"
-								emptyTitle="No headers"
-								emptyDescription="Add headers such as Authorization or Content-Type."
-								addLabel="Add header"
-								onAdd={() => addRow("headers")}
-								onChange={(id, field, value) =>
-									changeRow("headers", id, field, value)
-								}
-								onRemove={(id) => removeRow("headers", id)}
-							/>
-						</TabsContent>
-
-						<TabsContent value="body" className="p-4">
-							<RequestBodyEditor
-								bodyType={draft.bodyType}
-								body={draft.body}
-								onBodyTypeChange={(bodyType) =>
-									updateDraft({ type: "set-body-type", bodyType })
-								}
-								onBodyChange={(body) => updateDraft({ type: "set-body", body })}
-							/>
-						</TabsContent>
-					</Tabs>
-				</CardContent>
-			</Card>
-
-			<ResponsePanel execution={lastExecution} isSending={isSending} />
-
-			<HistoryPanel onRestore={handleRestore} />
-
-			<CollectionsPanel draft={draft} onRestore={handleRestore} />
+			<HistoryPanel onRestore={handleOpenRequest} />
 		</div>
-	);
-}
-
-function TabCount({ count }: { count: number }) {
-	return (
-		<span className="text-muted-foreground text-[0.7rem] tabular-nums">
-			({count})
-		</span>
 	);
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { FileBracesIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 
 import { CodeEditor } from "@/components/ui/code-editor";
 import {
@@ -13,6 +12,8 @@ import {
 } from "@/components/ui/select";
 
 import type { RequestBodyType } from "../model/types";
+
+import { EmptyState } from "./empty-state";
 
 type RequestBodyEditorProps = {
 	bodyType: RequestBodyType;
@@ -75,21 +76,16 @@ export function RequestBodyEditor({
 			</div>
 
 			{bodyType === "none" ? (
-				<div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-10 text-center">
-					<span className="bg-muted text-muted-foreground grid size-9 place-items-center rounded-full">
-						<HugeiconsIcon
-							icon={FileBracesIcon}
-							className="size-4"
-							aria-hidden="true"
-						/>
-					</span>
-					<p className="text-sm font-medium">No request body</p>
-					<p className="text-muted-foreground text-xs">
-						Choose JSON or Text above to start composing a body.
-					</p>
+				<div className="rounded-lg border border-dashed p-6">
+					<EmptyState
+						icon={FileBracesIcon}
+						title="No request body"
+						description="Choose JSON or Text above to start composing a body."
+						className="px-0 py-0"
+					/>
 				</div>
 			) : (
-				<div className="h-[clamp(14rem,32svh,22rem)] overflow-hidden rounded-lg border">
+				<div className="h-[clamp(14rem,32svh,22rem)] overflow-hidden border">
 					<CodeEditor
 						value={body}
 						language={bodyType === "json" ? "json" : ""}

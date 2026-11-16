@@ -9,6 +9,8 @@ import { cn } from "@/shared/lib/utils";
 
 import type { KeyValueField, KeyValueRow } from "../model/types";
 
+import { EmptyState } from "./empty-state";
+
 type KeyValueEditorProps = {
 	rows: KeyValueRow[];
 	icon: IconSvgElement;
@@ -36,25 +38,24 @@ export function KeyValueEditor({
 }: KeyValueEditorProps) {
 	if (rows.length === 0) {
 		return (
-			<div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-8 text-center">
-				<span className="bg-muted text-muted-foreground grid size-9 place-items-center rounded-full">
-					<HugeiconsIcon icon={icon} className="size-4" aria-hidden="true" />
-				</span>
-				<div>
-					<p className="text-sm font-medium">{emptyTitle}</p>
-					<p className="text-muted-foreground mt-1 text-xs">
-						{emptyDescription}
-					</p>
-				</div>
-				<Button type="button" variant="outline" size="sm" onClick={onAdd}>
-					<HugeiconsIcon
-						icon={PlusSignIcon}
-						className="size-3.5"
-						data-icon="inline-start"
-						aria-hidden="true"
-					/>
-					{addLabel}
-				</Button>
+			<div className="rounded-lg border border-dashed p-6">
+				<EmptyState
+					icon={icon}
+					title={emptyTitle}
+					description={emptyDescription}
+					className="px-0 py-0"
+					action={
+						<Button type="button" variant="outline" size="sm" onClick={onAdd}>
+							<HugeiconsIcon
+								icon={PlusSignIcon}
+								className="size-4"
+								data-icon="inline-start"
+								aria-hidden="true"
+							/>
+							{addLabel}
+						</Button>
+					}
+				/>
 			</div>
 		);
 	}

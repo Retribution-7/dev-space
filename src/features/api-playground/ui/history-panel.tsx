@@ -9,13 +9,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
@@ -33,6 +27,8 @@ import {
 } from "../model/use-request-history";
 
 import { ConfirmDialog } from "./confirm-dialog";
+import { EmptyState } from "./empty-state";
+import { PanelHeader } from "./panel-header";
 
 type HistoryPanelProps = {
 	onRestore: (draft: RequestDraft) => void;
@@ -65,39 +61,28 @@ export function HistoryPanel({ onRestore }: HistoryPanelProps) {
 
 	return (
 		<Card role="region" aria-label="History" className="gap-0 py-0 shadow-xs">
-			<CardHeader className="flex flex-row flex-wrap items-center gap-3 border-b">
-				<span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-lg">
-					<HugeiconsIcon
-						icon={HistoryIcon}
-						className="size-4"
-						aria-hidden="true"
-					/>
-				</span>
-				<div className="min-w-0 flex-1">
-					<CardTitle className="text-sm">History</CardTitle>
-					<CardDescription className="text-xs">
-						Completed requests are saved here. Select one to restore it in the
-						Request Builder.
-					</CardDescription>
-				</div>
-
-				{hasHydrated && entries.length > 0 ? (
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						onClick={() => setIsClearDialogOpen(true)}
-					>
-						<HugeiconsIcon
-							icon={Delete02Icon}
-							className="size-3.5"
-							data-icon="inline-start"
-							aria-hidden="true"
-						/>
-						Clear history
-					</Button>
-				) : null}
-			</CardHeader>
+			<PanelHeader
+				icon={HistoryIcon}
+				title="History"
+				action={
+					hasHydrated && entries.length > 0 ? (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={() => setIsClearDialogOpen(true)}
+						>
+							<HugeiconsIcon
+								icon={Delete02Icon}
+								className="size-4"
+								data-icon="inline-start"
+								aria-hidden="true"
+							/>
+							Clear history
+						</Button>
+					) : null
+				}
+			/>
 
 			<CardContent className="p-0">
 				{!hasHydrated ? (
@@ -105,7 +90,7 @@ export function HistoryPanel({ onRestore }: HistoryPanelProps) {
 				) : entries.length === 0 ? (
 					<EmptyHistoryState />
 				) : (
-					<ul className="max-h-[24rem] overflow-y-auto">
+					<ul>
 						{entries.map((entry) => (
 							<HistoryItem
 								key={entry.id}
@@ -197,17 +182,11 @@ function HistoryItem({ entry, onRestore, onDelete }: HistoryItemProps) {
 
 function EmptyHistoryState() {
 	return (
-		<div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-			<span className="bg-muted text-muted-foreground grid size-10 place-items-center rounded-full">
-				<HugeiconsIcon icon={InboxIcon} className="size-5" aria-hidden="true" />
-			</span>
-			<div className="max-w-md">
-				<p className="text-sm font-medium">No requests yet</p>
-				<p className="text-muted-foreground mt-1 text-sm">
-					Send a request and it will appear here for quick reuse.
-				</p>
-			</div>
-		</div>
+		<EmptyState
+			icon={InboxIcon}
+			title="No requests yet"
+			description="Send a request and it will appear here for quick reuse."
+		/>
 	);
 }
 

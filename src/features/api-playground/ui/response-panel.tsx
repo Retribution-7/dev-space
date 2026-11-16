@@ -17,13 +17,7 @@ import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,6 +34,9 @@ import {
 	type ResponsePanelView,
 } from "../model/response-panel-state";
 import type { HttpResponse, RequestExecution } from "../model/types";
+
+import { EmptyState } from "./empty-state";
+import { PanelHeader } from "./panel-header";
 
 type ResponsePanelProps = {
 	execution: RequestExecution | null;
@@ -71,22 +68,16 @@ export function ResponsePanel({ execution, isSending }: ResponsePanelProps) {
 	const view = getResponsePanelView(execution, isSending);
 
 	return (
-		<Card role="region" aria-label="Response" className="gap-0 py-0 shadow-xs">
-			<CardHeader className="flex flex-row flex-wrap items-center gap-3 border-b">
-				<span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-lg">
-					<HugeiconsIcon
-						icon={CodeIcon}
-						className="size-4"
-						aria-hidden="true"
-					/>
-				</span>
-				<div className="min-w-0 flex-1">
-					<CardTitle className="text-sm">Response</CardTitle>
-					<CardDescription className="text-xs">
-						Inspect the status, headers, and body of the last request.
-					</CardDescription>
-				</div>
-			</CardHeader>
+		<Card
+			role="region"
+			aria-label="Response"
+			className="gap-0 rounded-none border-0 py-0 shadow-none ring-0"
+		>
+			<PanelHeader
+				icon={CodeIcon}
+				title="Response"
+				description="Inspect the status, headers, and body of the last request."
+			/>
 
 			<CardContent className="p-0">
 				<ResponsePanelContent view={view} />
@@ -378,7 +369,7 @@ function InvalidJsonBodyViewer({
 		<div className="flex flex-col gap-3">
 			<div
 				role="alert"
-				className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-sm"
+				className="flex items-start gap-2 border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-sm"
 			>
 				<HugeiconsIcon
 					icon={AlertCircleIcon}
@@ -446,7 +437,7 @@ function ResponseBodyFrame({
 	children,
 }: ResponseBodyFrameProps) {
 	return (
-		<div className="overflow-hidden rounded-lg border">
+		<div className="overflow-hidden border">
 			<div className="bg-muted/40 flex flex-wrap items-center gap-2 border-b px-2 py-1.5">
 				<span className="text-muted-foreground px-1 text-xs font-medium">
 					{label}
@@ -478,7 +469,7 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
 	}
 
 	return (
-		<div className="overflow-hidden rounded-lg border">
+		<div className="overflow-hidden border">
 			<dl className="divide-y">
 				{entries.map(([name, value]) => (
 					<div
@@ -520,7 +511,7 @@ function FailureState({
 		<div role={isError ? "alert" : "status"} className="p-4">
 			<div
 				className={cn(
-					"flex items-start gap-3 rounded-lg border p-3",
+					"flex items-start gap-3 border p-3",
 					isError ? "border-destructive/20 bg-destructive/5" : "bg-muted/40",
 				)}
 			>
@@ -555,20 +546,18 @@ function FailureState({
 
 function StateMessage({ icon, title, description, detail }: StateMessageProps) {
 	return (
-		<div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-			<span className="bg-muted text-muted-foreground grid size-10 place-items-center rounded-full">
-				<HugeiconsIcon icon={icon} className="size-5" aria-hidden="true" />
-			</span>
-			<div className="max-w-md">
-				<p className="text-sm font-medium">{title}</p>
-				<p className="text-muted-foreground mt-1 text-sm">{description}</p>
-				{detail ? (
-					<p className="text-muted-foreground mt-2 font-mono text-xs break-all">
+		<EmptyState
+			icon={icon}
+			title={title}
+			description={description}
+			action={
+				detail ? (
+					<p className="text-muted-foreground font-mono text-xs break-all">
 						{detail}
 					</p>
-				) : null}
-			</div>
-		</div>
+				) : undefined
+			}
+		/>
 	);
 }
 
