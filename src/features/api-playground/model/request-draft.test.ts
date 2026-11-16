@@ -8,6 +8,23 @@ import {
 } from "./request-draft";
 import { HTTP_METHODS, type RequestDraft } from "./types";
 
+function createPopulatedDraft(): RequestDraft {
+	return {
+		method: "POST",
+		url: "https://api.example.com/users?page=2",
+		params: [
+			{ id: "param-page", key: "page", value: "2" },
+			{ id: "param-limit", key: "limit", value: "25" },
+		],
+		headers: [
+			{ id: "header-accept", key: "Accept", value: "application/json" },
+			{ id: "header-auth", key: "Authorization", value: "Bearer token" },
+		],
+		bodyType: "json",
+		body: '{"name":"DevSpace"}',
+	};
+}
+
 describe("HTTP methods", () => {
 	it("exposes all supported methods", () => {
 		expect(HTTP_METHODS).toEqual([
@@ -70,14 +87,7 @@ describe("requestDraftReducer", () => {
 	});
 
 	it("keeps URL, params, headers, and body when the method changes", () => {
-		const draft: RequestDraft = {
-			method: "GET",
-			url: "https://api.example.com/users?page=2",
-			params: [{ id: "param-1", key: "page", value: "2" }],
-			headers: [{ id: "header-1", key: "Accept", value: "application/json" }],
-			bodyType: "json",
-			body: '{"name":"DevSpace"}',
-		};
+		const draft = createPopulatedDraft();
 
 		const state = requestDraftReducer(draft, {
 			type: "set-method",
@@ -85,7 +95,7 @@ describe("requestDraftReducer", () => {
 		});
 
 		expect(state).toEqual({ ...draft, method: "DELETE" });
-		expect(draft.method).toBe("GET");
+		expect(draft.method).toBe("POST");
 	});
 
 	it("keeps the selected method when other request fields change", () => {
@@ -118,6 +128,45 @@ describe("requestDraftReducer", () => {
 		});
 
 		expect(state.method).toBe("OPTIONS");
+	});
+
+	it("updates the URL without changing other populated fields", () => {
+		const draft = createPopulatedDraft();
+		const nextUrl = "https://api.example.com/v2/users";
+
+		const state = requestDraftReducer(draft, {
+			type: "set-url",
+			url: nextUrl,
+		});
+
+		expect(state).toEqual({ ...draft, url: nextUrl });
+		expect(draft.url).toBe("https://api.example.com/users?page=2");
+	});
+
+	it("updates a row without mutating the original draft", () => {
+		const draft = createPopulatedDraft();
+		const originalParams = draft.params;
+		const originalParam = draft.params[0];
+
+		const state = requestDraftReducer(draft, {
+			type: "update-row",
+			section: "params",
+			id: "param-page",
+			field: "value",
+			value: "3",
+		});
+
+		expect(state).not.toBe(draft);
+		expect(state.params).not.toBe(originalParams);
+		expect(draft.params).toBe(originalParams);
+		expect(draft.params[0]).toBe(originalParam);
+		expect(originalParam?.value).toBe("2");
+		expect(state.params[0]?.value).toBe("3");
+		expect(state.method).toBe(draft.method);
+		expect(state.url).toBe(draft.url);
+		expect(state.headers).toBe(draft.headers);
+		expect(state.bodyType).toBe(draft.bodyType);
+		expect(state.body).toBe(draft.body);
 	});
 
 	it("adds rows to the requested section with the provided id", () => {
@@ -179,6 +228,61 @@ describe("requestDraftReducer", () => {
 		expect(state.params).toEqual([{ id: "param-1", key: "page", value: "2" }]);
 		expect(state.headers).toEqual([
 			{ id: "header-1", key: "Accept", value: "" },
+		]);
+	});
+
+	it("keeps multiple query parameters in order when editing and removing one", () => {
+		let state = createRequestDraft();
+
+		for (const [id, key, value] of [
+			["param-page", "page", "2"],
+			["param-limit", "limit", "10"],
+			["param-sort", "sort", "desc"],
+		] as const) {
+			state = requestDraftReducer(state, {
+				type: "add-row",
+				section: "params",
+				id,
+			});
+			state = requestDraftReducer(state, {
+				type: "update-row",
+				section: "params",
+				id,
+				field: "key",
+				value: key,
+			});
+			state = requestDraftReducer(state, {
+				type: "update-row",
+				section: "params",
+				id,
+				field: "value",
+				value,
+			});
+		}
+
+		state = requestDraftReducer(state, {
+			type: "update-row",
+			section: "params",
+			id: "param-limit",
+			field: "value",
+			value: "25",
+		});
+
+		expect(state.params).toEqual([
+			{ id: "param-page", key: "page", value: "2" },
+			{ id: "param-limit", key: "limit", value: "25" },
+			{ id: "param-sort", key: "sort", value: "desc" },
+		]);
+
+		state = requestDraftReducer(state, {
+			type: "remove-row",
+			section: "params",
+			id: "param-limit",
+		});
+
+		expect(state.params).toEqual([
+			{ id: "param-page", key: "page", value: "2" },
+			{ id: "param-sort", key: "sort", value: "desc" },
 		]);
 	});
 
@@ -278,6 +382,83 @@ describe("requestDraftReducer", () => {
 
 		expect(state.bodyType).toBe("json");
 		expect(state.body).toBe('{"name":"DevSpace"}');
+	});
+
+	it("keeps body content when the body type changes", () => {
+		const draft = createPopulatedDraft();
+		let state = requestDraftReducer(draft, {
+			type: "set-body-type",
+			bodyType: "text",
+		});
+
+		expect(state.bodyType).toBe("text");
+		expect(state.body).toBe(draft.body);
+
+		state = requestDraftReducer(state, {
+			type: "set-body-type",
+			bodyType: "none",
+		});
+
+		expect(state.bodyType).toBe("none");
+		expect(state.body).toBe(draft.body);
+
+		state = requestDraftReducer(state, {
+			type: "set-body-type",
+			bodyType: "json",
+		});
+
+		expect(state).toEqual(draft);
+	});
+
+	it("updates body content without changing the selected type or other fields", () => {
+		const draft = createPopulatedDraft();
+		const nextBody = '{"name":"Updated"}';
+
+		const state = requestDraftReducer(draft, {
+			type: "set-body",
+			body: nextBody,
+		});
+
+		expect(state).toEqual({ ...draft, body: nextBody });
+		expect(draft.body).toBe('{"name":"DevSpace"}');
+	});
+
+	it("ignores blank rows added to params and headers", () => {
+		let state = createRequestDraft();
+
+		state = requestDraftReducer(state, {
+			type: "add-row",
+			section: "params",
+			id: "param-blank",
+		});
+		state = requestDraftReducer(state, {
+			type: "add-row",
+			section: "headers",
+			id: "header-blank",
+		});
+
+		expect(getFilledRowCount(state.params)).toBe(0);
+		expect(getFilledRowCount(state.headers)).toBe(0);
+		expect(toKeyValueEntries(state.params)).toEqual([]);
+		expect(toKeyValueEntries(state.headers)).toEqual([]);
+
+		state = requestDraftReducer(state, {
+			type: "update-row",
+			section: "params",
+			id: "param-blank",
+			field: "key",
+			value: "page",
+		});
+		state = requestDraftReducer(state, {
+			type: "update-row",
+			section: "headers",
+			id: "header-blank",
+			field: "key",
+			value: "Accept",
+		});
+
+		expect(getFilledRowCount(state.params)).toBe(1);
+		expect(getFilledRowCount(state.headers)).toBe(1);
 	});
 });
 
